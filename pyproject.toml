@@ -37,6 +37,7 @@ include = ["gazelock_ml*"]
 testpaths = ["ML/gazelock_ml/tests"]
 python_files = ["test_*.py"]
 addopts = "-ra --strict-markers --strict-config"
+markers = ["slow: marks tests as slow (select with -m slow)"]
 
 [tool.ruff]
 line-length = 100
