@@ -114,6 +114,12 @@ class DigiFaceSource(SyntheticFaceSource):
                 f"No DigiFace-1M images in {root}. Expected <id>/<n>.png layout."
             )
 
+        # Apply max_samples UP FRONT so the cache build only runs on the
+        # subset we'll actually use. Otherwise face-alignment processes
+        # the full 1M+ even when the caller only wants 20k samples.
+        if max_samples is not None:
+            discovered = discovered[:max_samples]
+
         cache = _load_cache(root)
 
         if build_cache_if_needed:
@@ -126,9 +132,6 @@ class DigiFaceSource(SyntheticFaceSource):
         entries: list[tuple[Path, np.ndarray]] = [
             (p, cache[str(p)]) for p in discovered if str(p) in cache
         ]
-
-        if max_samples is not None:
-            entries = entries[:max_samples]
 
         self._root = root
         self._rng_seed = rng_seed
