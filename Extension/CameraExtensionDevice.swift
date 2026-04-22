@@ -22,6 +22,11 @@ final class CameraExtensionDevice: NSObject, CMIOExtensionDeviceSource {
         }
     }
 
+    /// FourCC 'virt' — marks this as a virtual device (equivalent to
+    /// `kIOAudioDeviceTransportTypeVirtual` from `<IOKit/audio/IOAudioTypes.h>`
+    /// but written inline to avoid the IOKit import.
+    private static let transportTypeVirtual: UInt32 = 0x76697274
+
     var availableProperties: Set<CMIOExtensionProperty> {
         [.deviceTransportType, .deviceModel]
     }
@@ -31,7 +36,7 @@ final class CameraExtensionDevice: NSObject, CMIOExtensionDeviceSource {
     ) throws -> CMIOExtensionDeviceProperties {
         let state = CMIOExtensionDeviceProperties(dictionary: [:])
         if properties.contains(.deviceTransportType) {
-            state.transportType = kIOAudioDeviceTransportTypeVirtual
+            state.transportType = Self.transportTypeVirtual
         }
         if properties.contains(.deviceModel) {
             state.model = "GazeLock Virtual Camera v0.1"
