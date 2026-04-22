@@ -1,0 +1,103 @@
+import AppKit
+import SwiftUI
+
+public struct PopoverView: View {
+    @Bindable var store: ControlStateStore
+    @Binding var beforeImage: NSImage?
+    @Binding var afterImage: NSImage?
+    var onOpenWindow: () -> Void
+
+    public init(
+        store: ControlStateStore,
+        beforeImage: Binding<NSImage?>,
+        afterImage: Binding<NSImage?>,
+        onOpenWindow: @escaping () -> Void
+    ) {
+        self.store = store
+        self._beforeImage = beforeImage
+        self._afterImage = afterImage
+        self.onOpenWindow = onOpenWindow
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: PopoverStyle.spacing) {
+            header
+            LivePreview(beforeImage: $beforeImage, afterImage: $afterImage)
+            toggleRow
+            intensityRow
+            Divider().overlay(PopoverStyle.border)
+            footer
+        }
+        .padding(PopoverStyle.spacingLoose)
+        .frame(width: PopoverStyle.popoverWidth)
+        .background(PopoverStyle.backgroundPrimary)
+    }
+
+    private var header: some View {
+        HStack(spacing: PopoverStyle.spacingTight) {
+            Circle()
+                .fill(statusColor)
+                .frame(width: 6, height: 6)
+                .shadow(color: statusColor.opacity(0.6), radius: 3)
+            Text("GAZELOCK")
+                .font(PopoverStyle.displayFont(size: 12))
+                .tracking(1.2)
+                .foregroundStyle(PopoverStyle.textPrimary)
+            Spacer()
+        }
+    }
+
+    private var toggleRow: some View {
+        HStack {
+            Text("CORRECTION")
+                .font(PopoverStyle.labelFont())
+                .tracking(0.4)
+                .foregroundStyle(PopoverStyle.textSecondary)
+            Spacer()
+            Toggle("", isOn: Binding(
+                get: { store.state.isEnabled },
+                set: { store.setEnabled($0) }
+            ))
+            .toggleStyle(.switch)
+            .tint(PopoverStyle.accent)
+        }
+    }
+
+    private var intensityRow: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("INTENSITY")
+                    .font(PopoverStyle.monoFont())
+                    .tracking(1.2)
+                    .foregroundStyle(PopoverStyle.textTertiary)
+                Spacer()
+                Text(String(format: "%.0f", store.state.intensity * 100))
+                    .font(PopoverStyle.monoFont())
+                    .foregroundStyle(PopoverStyle.accent)
+            }
+            Slider(value: Binding(
+                get: { store.state.intensity },
+                set: { store.setIntensity($0) }
+            ), in: 0...1)
+            .tint(PopoverStyle.accent)
+        }
+    }
+
+    private var footer: some View {
+        HStack {
+            Spacer()
+            Button(action: onOpenWindow) {
+                Text("OPEN WINDOW →")
+                    .font(PopoverStyle.labelFont(size: 9))
+                    .tracking(1.5)
+                    .foregroundStyle(PopoverStyle.textTertiary)
+            }
+            .buttonStyle(.plain)
+            Spacer()
+        }
+    }
+
+    private var statusColor: Color {
+        store.state.isEnabled ? PopoverStyle.accent : PopoverStyle.textTertiary
+    }
+}
