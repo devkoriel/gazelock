@@ -23,7 +23,7 @@ generate:
 
 build: generate
 	@echo "==> Building $(PROJECT_NAME) (Debug)"
-	$(XCODEBUILD) $(XCODEBUILD_FLAGS) -configuration $(CONFIG_DEBUG) build
+	$(XCODEBUILD) $(XCODEBUILD_FLAGS) -configuration $(CONFIG_DEBUG) $(CODESIGN_FLAGS) build
 
 build-release: generate
 	@echo "==> Building $(PROJECT_NAME) (Release)"
