@@ -24,8 +24,9 @@ final class CameraExtensionDevice: NSObject, CMIOExtensionDeviceSource {
 
     /// FourCC 'virt' — marks this as a virtual device (equivalent to
     /// `kIOAudioDeviceTransportTypeVirtual` from `<IOKit/audio/IOAudioTypes.h>`
-    /// but written inline to avoid the IOKit import.
-    private static let transportTypeVirtual: UInt32 = 0x76697274
+    /// but written inline to avoid the IOKit import. The `Int` type matches
+    /// `CMIOExtensionDeviceProperties.transportType` in the current SDK.
+    private static let transportTypeVirtual: Int = 0x76697274
 
     var availableProperties: Set<CMIOExtensionProperty> {
         [.deviceTransportType, .deviceModel]
