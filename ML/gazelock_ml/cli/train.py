@@ -15,6 +15,11 @@ from torch.utils.data import DataLoader
 from gazelock_ml.data.dataset import EyePairDataset
 from gazelock_ml.data.fixtures import make_fake_eye_patch
 from gazelock_ml.models.refiner import RefinerUNet
+from gazelock_ml.synthesis.base import SyntheticFaceSource
+from gazelock_ml.synthesis.blender_eyes import BlenderEyeSource
+from gazelock_ml.synthesis.digiface import DigiFaceSource
+from gazelock_ml.synthesis.facesynthetics import FaceSyntheticsSource
+from gazelock_ml.synthesis.mixer import SourceMixer
 from gazelock_ml.training.checkpoints import (
     CheckpointMetadata,
     save_checkpoint,
@@ -28,6 +33,31 @@ def _fixture_source(n: int) -> Iterable[np.ndarray]:
     return (make_fake_eye_patch(seed=i) for i in range(n))
 
 
+def _parse_mixer_weights(spec: str) -> dict[str, float]:
+    out: dict[str, float] = {}
+    for pair in spec.split(","):
+        if not pair.strip():
+            continue
+        name, weight = pair.split(":")
+        out[name.strip()] = float(weight)
+    return out
+
+
+def _build_source_mixer(args: argparse.Namespace) -> SourceMixer | None:
+    sources: list[SyntheticFaceSource] = []
+    if args.digiface_root is not None:
+        sources.append(DigiFaceSource(args.digiface_root))
+    if args.facesynthetics_root is not None:
+        sources.append(FaceSyntheticsSource(args.facesynthetics_root))
+    if args.synthetic_eyes_root is not None:
+        sources.append(BlenderEyeSource(args.synthetic_eyes_root))
+    if not sources:
+        return None
+    weights = _parse_mixer_weights(args.mixer_weights)
+    active = {s.info.name: weights.get(s.info.name, 1.0) for s in sources}
+    return SourceMixer(sources, weights=active, seed=args.seed)
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Train the GazeLock refiner UNet.")
     parser.add_argument("--steps", type=int, default=10, help="Number of steps.")
@@ -35,9 +65,19 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--output-dir", type=Path, default=Path("weights/debug"))
     parser.add_argument("--seed", type=int, default=0)
-    # Real-data options (not used for fixtures):
-    parser.add_argument("--unityeyes-root", type=Path, default=None)
-    parser.add_argument("--ffhq-root", type=Path, default=None)
+    # Real-data options (commercial-safe synthetic sources):
+    parser.add_argument("--digiface-root", type=Path, default=None,
+                        help="Microsoft DigiFace-1M root (MIT).")
+    parser.add_argument("--facesynthetics-root", type=Path, default=None,
+                        help="Microsoft FaceSynthetics root (MIT).")
+    parser.add_argument("--synthetic-eyes-root", type=Path, default=None,
+                        help="Blender-rendered eyes root (produced by make ml-render).")
+    parser.add_argument(
+        "--mixer-weights",
+        type=str,
+        default="digiface:0.45,blender_eye:0.35,facesynthetics:0.20",
+        help="Comma-separated name:weight pairs.",
+    )
     args = parser.parse_args(argv)
 
     torch.manual_seed(args.seed)
@@ -51,13 +91,19 @@ def main(argv: list[str] | None = None) -> None:
     optimizer = AdamW(model.parameters(), lr=args.lr)
     scheduler = CosineAnnealingLR(optimizer, T_max=args.steps)
 
-    if args.unityeyes_root or args.ffhq_root:
-        raise NotImplementedError(
-            "Real-dataset loaders (UnityEyes/FFHQ) are plumbed; hook them into "
-            "the Dataset factory below. Phase 2b ships the fixture path only."
-        )
+    mixer = _build_source_mixer(args)
+    if mixer is not None:
+        from itertools import islice
 
-    ds = EyePairDataset(lambda: _fixture_source(args.steps * args.batch_size * 2), rng_seed=args.seed)
+        n_patches = args.steps * args.batch_size * 4
+
+        def patch_source() -> Iterable[np.ndarray]:
+            return islice(iter(mixer), n_patches)
+    else:
+        def patch_source() -> Iterable[np.ndarray]:
+            return _fixture_source(args.steps * args.batch_size * 2)
+
+    ds = EyePairDataset(patch_source, rng_seed=args.seed)
     loader = DataLoader(ds, batch_size=args.batch_size, num_workers=0)
 
     def _log_step(r):
