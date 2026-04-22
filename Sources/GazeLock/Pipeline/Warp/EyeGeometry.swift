@@ -12,9 +12,23 @@ public enum EyeGeometry {
     /// Compute the target iris pixel position for "looks-at-camera".
     ///
     /// Mirrors `gazelock_ml.warp.geometry.compute_target_iris_px`.
+    ///
+    /// - Parameters:
+    ///   - eye: Eye landmarks (pupil center, iris radius, contour)
+    ///   - headPose: Head rotation (yaw, pitch, roll in radians)
+    ///   - verticalAimDeg: Vertical aim offset in degrees. Positive values shift
+    ///     the target downward in image coordinates (default: 0)
+    ///   - horizontalAimDeg: Horizontal aim offset in degrees. Positive values
+    ///     shift the target rightward (default: 0)
+    ///
+    /// The aim parameters shift the correction target within the image plane
+    /// via `tan(deg) * eyeballRadiusMm * pxPerMm`, enabling fine-grained
+    /// control over perceived gaze direction.
     public static func targetIrisPx(
         eye: EyeLandmarks,
-        headPose: HeadPose
+        headPose: HeadPose,
+        verticalAimDeg: Double = 0.0,
+        horizontalAimDeg: Double = 0.0
     ) -> Vec2 {
         let cy = cos(headPose.yaw)
         let sy = sin(headPose.yaw)
@@ -51,9 +65,15 @@ public enum EyeGeometry {
         let dxPx = dispMm.x * pxPerMm
         let dyPx = -dispMm.y * pxPerMm  // flip y for image coordinates
 
+        // Aim offsets: shift the target within the image plane. Positive
+        // verticalAimDeg shifts DOWN in image coordinates (caller perceives
+        // slightly lower gaze — Jerald & Jacobs 2024 "2° below lens" default).
+        let aimShiftX = eyeballRadiusMm * tan(horizontalAimDeg * .pi / 180.0) * pxPerMm
+        let aimShiftY = eyeballRadiusMm * tan(verticalAimDeg * .pi / 180.0) * pxPerMm
+
         return Vec2(
-            eye.pupilCenter.x + dxPx,
-            eye.pupilCenter.y + dyPx
+            eye.pupilCenter.x + dxPx + aimShiftX,
+            eye.pupilCenter.y + dyPx + aimShiftY
         )
     }
 }
