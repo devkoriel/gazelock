@@ -1,0 +1,50 @@
+[project]
+name = "gazelock-ml"
+version = "0.1.0"
+description = "GazeLock training & export pipeline (seam-hider refiner UNet)"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "MIT" }
+authors = [
+    { name = "GazeLock contributors" },
+]
+dependencies = [
+    "torch>=2.2,<3.0",
+    "torchvision>=0.17,<1.0",
+    "coremltools>=8.0,<9.0",
+    "numpy>=1.26,<3.0",
+    "pillow>=10.0,<12.0",
+    "opencv-python-headless>=4.9,<5.0",
+    "scipy>=1.11,<2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0,<9.0",
+    "pytest-xdist>=3.5,<4.0",
+    "ruff>=0.5,<1.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["ML"]
+include = ["gazelock_ml*"]
+
+[tool.pytest.ini_options]
+testpaths = ["ML/gazelock_ml/tests"]
+python_files = ["test_*.py"]
+addopts = "-ra --strict-markers --strict-config"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "RUF"]
+ignore = ["E501"]  # line-length handled by formatter
+
+[tool.ruff.lint.per-file-ignores]
+"ML/gazelock_ml/tests/*" = ["N802", "N803"]  # allow test_SomeClass-style names
