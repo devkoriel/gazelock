@@ -9,6 +9,9 @@ DERIVED_DATA = $(BUILD_DIR)/DerivedData
 
 XCODEBUILD = xcodebuild
 XCODEBUILD_FLAGS = -project $(PROJECT_NAME).xcodeproj -scheme $(SCHEME) -derivedDataPath $(DERIVED_DATA)
+# Ad-hoc signing avoids the provisioning-profile requirement for the system
+# extension entitlement in local/CI builds without a developer account.
+CODESIGN_FLAGS = CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO ENABLE_HARDENED_RUNTIME=NO
 XCPRETTY ?= xcpretty
 
 all: generate build
@@ -28,11 +31,11 @@ build-release: generate
 
 test: generate
 	@echo "==> Running tests"
-	$(XCODEBUILD) $(XCODEBUILD_FLAGS) -configuration $(CONFIG_DEBUG) test
+	$(XCODEBUILD) $(XCODEBUILD_FLAGS) -configuration $(CONFIG_DEBUG) $(CODESIGN_FLAGS) test
 
 test-unit: generate
 	@echo "==> Running unit tests"
-	$(XCODEBUILD) $(XCODEBUILD_FLAGS) -configuration $(CONFIG_DEBUG) \
+	$(XCODEBUILD) $(XCODEBUILD_FLAGS) -configuration $(CONFIG_DEBUG) $(CODESIGN_FLAGS) \
 		-only-testing:GazeLockTests test
 
 lint:
