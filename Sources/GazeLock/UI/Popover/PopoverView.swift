@@ -7,6 +7,8 @@ public struct PopoverView: View {
     @Binding var afterImage: NSImage?
     var onOpenWindow: () -> Void
 
+    @State private var showingSetupSheet = false
+
     public init(
         store: ControlStateStore,
         beforeImage: Binding<NSImage?>,
@@ -25,12 +27,20 @@ public struct PopoverView: View {
             LivePreview(beforeImage: $beforeImage, afterImage: $afterImage)
             toggleRow
             intensityRow
+            setupRow
+            verticalAimRow
+            sensitivityRow
             Divider().overlay(PopoverStyle.border)
             footer
         }
         .padding(PopoverStyle.spacingLoose)
         .frame(width: PopoverStyle.popoverWidth)
         .background(PopoverStyle.backgroundPrimary)
+        .sheet(isPresented: $showingSetupSheet) {
+            SetupPickerSheet(current: store.state.setupProfileId) { profile in
+                store.setSetupProfileId(profile.id)
+            }
+        }
     }
 
     private var header: some View {
@@ -99,5 +109,74 @@ public struct PopoverView: View {
 
     private var statusColor: Color {
         store.state.isEnabled ? PopoverStyle.accent : PopoverStyle.textTertiary
+    }
+
+    private var setupRow: some View {
+        HStack {
+            Text("SETUP")
+                .font(PopoverStyle.labelFont())
+                .tracking(0.4)
+                .foregroundStyle(PopoverStyle.textSecondary)
+            Spacer()
+            Button {
+                showingSetupSheet = true
+            } label: {
+                HStack(spacing: 4) {
+                    Text(BuiltinProfiles.byId(store.state.setupProfileId).name)
+                        .font(PopoverStyle.monoFont(size: 10))
+                        .foregroundStyle(PopoverStyle.accent)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(PopoverStyle.accent)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(PopoverStyle.border, lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var verticalAimRow: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("VERTICAL AIM")
+                    .font(PopoverStyle.monoFont())
+                    .tracking(1.2)
+                    .foregroundStyle(PopoverStyle.textTertiary)
+                Spacer()
+                Text(String(format: "%+.1f°", store.state.verticalAimDeg))
+                    .font(PopoverStyle.monoFont())
+                    .foregroundStyle(PopoverStyle.accent)
+            }
+            Slider(value: Binding(
+                get: { store.state.verticalAimDeg },
+                set: { store.setVerticalAimDeg($0) }
+            ), in: -10...10, step: 0.5)
+                .tint(PopoverStyle.accent)
+        }
+    }
+
+    private var sensitivityRow: some View {
+        HStack {
+            Text("SENSITIVITY")
+                .font(PopoverStyle.labelFont())
+                .tracking(0.4)
+                .foregroundStyle(PopoverStyle.textSecondary)
+            Spacer()
+            Picker("", selection: Binding(
+                get: { store.state.sensitivity },
+                set: { store.setSensitivity($0) }
+            )) {
+                Text("Loose").tag(Sensitivity.loose)
+                Text("Normal").tag(Sensitivity.normal)
+                Text("Tight").tag(Sensitivity.tight)
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 150)
+        }
     }
 }

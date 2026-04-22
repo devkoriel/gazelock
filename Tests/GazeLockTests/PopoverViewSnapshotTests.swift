@@ -18,4 +18,27 @@ final class PopoverViewSnapshotTests: XCTestCase {
         let controller = NSHostingController(rootView: view)
         XCTAssertNotNil(controller.view)
     }
+
+    @MainActor
+    func testPopoverRendersWithTightSensitivityAndAim() {
+        let store = ControlStateStore(initial: ControlState(
+            isEnabled: true,
+            intensity: 0.5,
+            activePresetName: "Default",
+            setupProfileId: BuiltinProfiles.macbookBuiltIn.id,
+            verticalAimDeg: 4.5,
+            horizontalAimDeg: 0.0,
+            sensitivity: .tight
+        ))
+        let before = Binding.constant(NSImage?.none)
+        let after = Binding.constant(NSImage?.none)
+        let view = PopoverView(
+            store: store,
+            beforeImage: before,
+            afterImage: after,
+            onOpenWindow: {}
+        )
+        let controller = NSHostingController(rootView: view)
+        XCTAssertNotNil(controller.view)
+    }
 }
