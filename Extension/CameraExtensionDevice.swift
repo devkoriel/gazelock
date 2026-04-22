@@ -1,7 +1,7 @@
 import Foundation
 import CoreMediaIO
 
-final class CameraExtensionDevice: NSObject, CMIOExtensionDeviceSource {
+final class CameraExtensionDevice: NSObject, CMIOExtensionDeviceSource, @unchecked Sendable {
     private(set) var device: CMIOExtensionDevice!
     private var streamSource: CameraExtensionStream!
 

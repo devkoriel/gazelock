@@ -3,10 +3,15 @@ import CoreMediaIO
 import CoreVideo
 import CoreMedia
 
-final class CameraExtensionStream: NSObject, CMIOExtensionStreamSource {
+final class CameraExtensionStream: NSObject, CMIOExtensionStreamSource, @unchecked Sendable {
     private(set) var stream: CMIOExtensionStream!
     let availableFormats: [CMIOExtensionStreamFormat]
 
+    // TODO(phase3): `streamingCounter` and `timer` are mutated from both the
+    // framework's clientQueue (via startStream/stopStream) and timerQueue (via
+    // emitFrame). Today the framework serialises the lifecycle calls and the
+    // timer only mutates inside them, so there is no realistic race — but an
+    // actor wrapper would make this explicit.
     private var streamingCounter: Int = 0
     private var timer: DispatchSourceTimer?
     private let timerQueue = DispatchQueue(
@@ -108,10 +113,17 @@ final class CameraExtensionStream: NSObject, CMIOExtensionStreamSource {
             sampleBufferOut: &sampleBuffer
         )
         if let buffer = sampleBuffer {
-            stream.send(buffer, discontinuity: [], hostTimeInNanoseconds: mach_absolute_time())
+            // `hostTimeInNanoseconds` expects nanoseconds; `mach_absolute_time()`
+            // returns Mach ticks (≈ 41.67 ns per tick on Apple Silicon), so we
+            // use the nanosecond-native clock API instead.
+            let hostTimeNs = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
+            stream.send(buffer, discontinuity: [], hostTimeInNanoseconds: hostTimeNs)
         }
     }
 
+    // TODO(phase3): replace per-frame `CVPixelBufferCreate` with a
+    // `CVPixelBufferPool` so the Phase 3 pipeline reuses IOSurface-backed
+    // buffers instead of allocating 60/sec.
     private func makeSolidColorPixelBuffer() -> CVPixelBuffer? {
         let attrs = [
             kCVPixelBufferCGImageCompatibilityKey: true,
