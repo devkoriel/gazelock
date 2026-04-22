@@ -115,3 +115,38 @@ ml-export:
 
 ml-verify: ml-lint ml-test
 	@echo "==> ml-verify: lint + test passed"
+
+# Phase 2c: Blender render pipeline
+BLENDER_RENDER_OUT ?= weights/synthetic-eyes
+BLENDER_RENDER_COUNT ?= 500000
+BLENDER_RENDER_RES ?= 256
+BLENDER_RENDER_SAMPLES ?= 64
+BLENDER_SEED ?= 42
+VIZ_PORT ?= 8765
+
+.PHONY: ml-render
+ml-render:
+	@mkdir -p $(BLENDER_RENDER_OUT)
+	blender --background --python \
+		ML/gazelock_ml/synthesis/blender/render_eyes.py -- \
+		--count $(BLENDER_RENDER_COUNT) \
+		--output $(BLENDER_RENDER_OUT) \
+		--resolution $(BLENDER_RENDER_RES) \
+		--samples $(BLENDER_RENDER_SAMPLES) \
+		--seed $(BLENDER_SEED) \
+		--resume
+
+.PHONY: ml-render-smoke
+ml-render-smoke:
+	$(MAKE) ml-render BLENDER_RENDER_COUNT=50 BLENDER_RENDER_RES=128 BLENDER_RENDER_SAMPLES=16
+
+.PHONY: ml-fetch-assets
+ml-fetch-assets:
+	uv run --project ML python ML/gazelock_ml/synthesis/blender/fetch_assets.py
+
+.PHONY: ml-render-viz
+ml-render-viz:
+	uv run --project ML python -m gazelock_ml.synthesis.blender.progress_viz \
+		--root $(BLENDER_RENDER_OUT) \
+		--total $(BLENDER_RENDER_COUNT) \
+		--port $(VIZ_PORT)
