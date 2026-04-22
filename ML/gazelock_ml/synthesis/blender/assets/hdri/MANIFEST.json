@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "license_contract": "All listed assets MUST be CC0 (Creative Commons Zero Public Domain Dedication). Mixing any other license into this directory is a compliance violation.",
+  "assets": [
+    {
+      "id": "studio_small_03",
+      "filename": "studio_small_03_1k.hdr",
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/studio_small_03_1k.hdr",
+      "author": "Poly Haven",
+      "license": "CC0",
+      "license_url": "https://polyhaven.com/license",
+      "category": "studio",
+      "sha256": "",
+      "fetched_on": "2026-04-23"
+    },
+    {
+      "id": "studio_small_08",
+      "filename": "studio_small_08_1k.hdr",
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/studio_small_08_1k.hdr",
+      "author": "Poly Haven",
+      "license": "CC0",
+      "license_url": "https://polyhaven.com/license",
+      "category": "studio",
+      "sha256": "",
+      "fetched_on": "2026-04-23"
+    },
+    {
+      "id": "photo_studio_01",
+      "filename": "photo_studio_01_1k.hdr",
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/photo_studio_01_1k.hdr",
+      "author": "Poly Haven",
+      "license": "CC0",
+      "license_url": "https://polyhaven.com/license",
+      "category": "studio",
+      "sha256": "",
+      "fetched_on": "2026-04-23"
+    },
+    {
+      "id": "brown_photostudio_02",
+      "filename": "brown_photostudio_02_1k.hdr",
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/brown_photostudio_02_1k.hdr",
+      "author": "Poly Haven",
+      "license": "CC0",
+      "license_url": "https://polyhaven.com/license",
+      "category": "studio",
+      "sha256": "",
+      "fetched_on": "2026-04-23"
+    },
+    {
+      "id": "kloppenheim_02",
+      "filename": "kloppenheim_02_1k.hdr",
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/kloppenheim_02_1k.hdr",
+      "author": "Poly Haven",
+      "license": "CC0",
+      "license_url": "https://polyhaven.com/license",
+      "category": "outdoor",
+      "sha256": "",
+      "fetched_on": "2026-04-23"
+    },
+    {
+      "id": "lebombo",
+      "filename": "lebombo_1k.hdr",
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/lebombo_1k.hdr",
+      "author": "Poly Haven",
+      "license": "CC0",
+      "license_url": "https://polyhaven.com/license",
+      "category": "outdoor",
+      "sha256": "",
+      "fetched_on": "2026-04-23"
+    },
+    {
+      "id": "venice_sunset",
+      "filename": "venice_sunset_1k.hdr",
+      "source_url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/venice_sunset_1k.hdr",
+      "author": "Poly Haven",
+      "license": "CC0",
+      "license_url": "https://polyhaven.com/license",
+      "category": "outdoor_warm",
+      "sha256": "",
+      "fetched_on": "2026-04-23"
+    }
+  ]
+}

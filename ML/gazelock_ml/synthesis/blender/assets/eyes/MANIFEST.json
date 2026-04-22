@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "license_contract": "All listed assets MUST be CC0 (Creative Commons Zero Public Domain Dedication). Mixing any other license into this directory is a compliance violation.",
+  "notes": "No suitable CC0 3D human eyeball models were found during P2c.6 research (Sketchfab/Poly Haven/BlenderKit CC0 filter returned only cultural artefacts, crabs, and flowers). The Blender render pipeline falls back to procedural eye geometry. Add CC0 eye assets here when they surface.",
+  "assets": []
+}

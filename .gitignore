@@ -63,3 +63,11 @@ docs/superpowers/
 # Release .mlpackage goes to Git LFS in Phase 4.
 weights/debug/
 weights/*.mlpackage
+
+# CC0 asset binaries — fetched locally by fetch_assets.py, not committed
+ML/gazelock_ml/synthesis/blender/assets/eyes/*.glb
+ML/gazelock_ml/synthesis/blender/assets/eyes/*.blend
+ML/gazelock_ml/synthesis/blender/assets/hdri/*.hdr
+
+# Blender render output — ~60 GB for 500k frames
+weights/synthetic-eyes/
