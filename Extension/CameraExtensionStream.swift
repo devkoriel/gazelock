@@ -5,7 +5,7 @@ import CoreMedia
 
 final class CameraExtensionStream: NSObject, CMIOExtensionStreamSource, @unchecked Sendable {
     private(set) var stream: CMIOExtensionStream!
-    let availableFormats: [CMIOExtensionStreamFormat]
+    let formats: [CMIOExtensionStreamFormat]
 
     // TODO(phase3): `streamingCounter` and `timer` are mutated from both the
     // framework's clientQueue (via startStream/stopStream) and timerQueue (via
@@ -31,7 +31,7 @@ final class CameraExtensionStream: NSObject, CMIOExtensionStreamSource, @uncheck
             minFrameDuration: CMTime(value: 1, timescale: fps),
             validFrameDurations: nil
         )
-        self.availableFormats = [videoStreamFormat]
+        self.formats = [videoStreamFormat]
 
         super.init()
 
