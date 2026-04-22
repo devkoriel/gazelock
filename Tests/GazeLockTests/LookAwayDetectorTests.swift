@@ -80,4 +80,40 @@ final class LookAwayDetectorTests: XCTestCase {
         let alpha = d.compute(headPose: pose(yawDeg: 0), timestampSeconds: 2.0)
         XCTAssertGreaterThan(alpha, 0.9)
     }
+
+    func testMultiMonitorDisengagesNearSecondaryCentroid() {
+        let cal = UserCalibration(
+            baseProfileId: "x",
+            cameraCentroid: .init(yawRad: 0, pitchRad: 0, rollRad: 0),
+            primaryScreenCentroid: .init(yawRad: 0, pitchRad: 0.05, rollRad: 0),
+            secondaryScreenCentroids: [
+                .init(yawRad: 0.5, pitchRad: 0, rollRad: 0)  // ~28.6° yaw
+            ]
+        )
+        let d = LookAwayDetector(sensitivity: .normal, calibration: cal)
+        // Feed a head pose near the secondary centroid (within 10°)
+        let alpha = d.compute(headPose: pose(yawDeg: 28), timestampSeconds: 0.0)
+        // Even though 28° yaw doesn't fully cross Normal's 25-30 transition,
+        // the centroid match forces alpha to 0 immediately.
+        XCTAssertEqual(alpha, 0.0, accuracy: 0.001)
+    }
+
+    func testMultiMonitorDoesNotDisengageFarFromSecondaryCentroid() {
+        let cal = UserCalibration(
+            baseProfileId: "x",
+            cameraCentroid: .init(yawRad: 0, pitchRad: 0, rollRad: 0),
+            primaryScreenCentroid: .init(yawRad: 0, pitchRad: 0, rollRad: 0),
+            secondaryScreenCentroids: [
+                .init(yawRad: 0.7, pitchRad: 0, rollRad: 0)  // ~40° yaw
+            ]
+        )
+        let d = LookAwayDetector(sensitivity: .normal, calibration: cal)
+        // Settle at frontal
+        for i in 0..<30 {
+            _ = d.compute(headPose: pose(yawDeg: 0), timestampSeconds: Double(i) / 60.0)
+        }
+        let alpha = d.compute(headPose: pose(yawDeg: 0), timestampSeconds: 1.0)
+        // Head is frontal, far from the secondary centroid → full engagement
+        XCTAssertGreaterThan(alpha, 0.9)
+    }
 }

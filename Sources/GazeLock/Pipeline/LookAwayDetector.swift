@@ -15,9 +15,14 @@ public final class LookAwayDetector {
     private var disengagedAtMs: Double?
 
     public var sensitivity: Sensitivity
+    public var calibration: UserCalibration?
 
-    public init(sensitivity: Sensitivity = .normal) {
+    public init(
+        sensitivity: Sensitivity = .normal,
+        calibration: UserCalibration? = nil
+    ) {
         self.sensitivity = sensitivity
+        self.calibration = calibration
     }
 
     /// `timestampSeconds` is the frame capture time (AVCapture PTS in seconds).
@@ -32,6 +37,25 @@ public final class LookAwayDetector {
 
         let mix = 0.15
         smoothedAlpha = smoothedAlpha * (1.0 - mix) + instantAlpha * mix
+
+        // Multi-monitor override: if head-pose is within 10° of any secondary
+        // screen centroid from calibration, force full disengage. This catches
+        // the case where the user turned to look at a monitor that's within
+        // the sensitivity's yaw threshold but clearly not the main screen.
+        if let cal = calibration {
+            let nowMs = timestampSeconds * 1000.0
+            let matches = cal.secondaryScreenCentroids.contains { centroid in
+                let dYaw = headPose.yaw - centroid.yawRad
+                let dPitch = headPose.pitch - centroid.pitchRad
+                let distDeg = sqrt(dYaw * dYaw + dPitch * dPitch) * 180.0 / .pi
+                return distDeg < 10.0
+            }
+            if matches {
+                disengagedAtMs = nowMs
+                smoothedAlpha = 0.0
+                return 0.0
+            }
+        }
 
         let nowMs = timestampSeconds * 1000.0
         let fullyDisengaged = smoothedAlpha < 0.1
