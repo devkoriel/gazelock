@@ -2,28 +2,44 @@ import Foundation
 import CoreMediaIO
 import CoreVideo
 import CoreMedia
+import AVFoundation
+import os
 
 final class CameraExtensionStream: NSObject, CMIOExtensionStreamSource, @unchecked Sendable {
     private(set) var stream: CMIOExtensionStream!
     let formats: [CMIOExtensionStreamFormat]
 
-    // TODO(phase3): `streamingCounter` and `timer` are mutated from both the
-    // framework's clientQueue (via startStream/stopStream) and timerQueue (via
-    // emitFrame). Today the framework serialises the lifecycle calls and the
-    // timer only mutates inside them, so there is no realistic race — but an
-    // actor wrapper would make this explicit.
-    private var streamingCounter: Int = 0
-    private var timer: DispatchSourceTimer?
-    private let timerQueue = DispatchQueue(
-        label: "com.gazelock.GazeLock.CameraExtension.streamTimer",
-        qos: .userInteractive
+    private static let logger = Logger(
+        subsystem: "com.gazelock.GazeLock.CameraExtension",
+        category: "Stream"
     )
+
+    private var streamingCounter: Int = 0
 
     private let width: Int32 = 1280
     private let height: Int32 = 720
     private let fps: Int32 = 60
 
-    init(localizedName: String) {
+    private let capture = CameraCapture()
+    private let controlClient: ControlClient
+    private let pipeline: FramePipeline?
+
+    init(localizedName: String, controlClient: ControlClient) {
+        self.controlClient = controlClient
+
+        // Pipeline init can fail (Metal unavailable, refiner missing, etc.).
+        // Fall back to passthrough so the extension never crashes the host.
+        let builtPipeline: FramePipeline?
+        do {
+            builtPipeline = try FramePipeline()
+        } catch {
+            Self.logger.error(
+                "FramePipeline init failed: \(error.localizedDescription, privacy: .public) — passthrough"
+            )
+            builtPipeline = nil
+        }
+        self.pipeline = builtPipeline
+
         let formatDescription = try! makeFormatDescription(width: width, height: height)
         let videoStreamFormat = CMIOExtensionStreamFormat(
             formatDescription: formatDescription,
@@ -67,29 +83,63 @@ final class CameraExtensionStream: NSObject, CMIOExtensionStreamSource, @uncheck
 
     func startStream() throws {
         streamingCounter += 1
-        if timer == nil { startTimer() }
+        guard streamingCounter == 1 else { return }
+
+        Self.logger.info("startStream: activating capture → pipeline → emit path")
+
+        controlClient.start()
+
+        capture.onFrame = { [weak self] pixelBuffer, timestamp in
+            self?.processFrame(pixelBuffer: pixelBuffer, timestamp: timestamp)
+        }
+
+        let sourceID = controlClient.currentState().sourceCameraUniqueID
+        do {
+            try capture.start(deviceUniqueID: sourceID)
+        } catch {
+            Self.logger.error("CameraCapture.start failed: \(error.localizedDescription, privacy: .public)")
+            // Roll back partial start so the next startStream retries cleanly.
+            controlClient.stop()
+            streamingCounter = 0
+            throw error
+        }
     }
 
     func stopStream() throws {
         streamingCounter = max(0, streamingCounter - 1)
-        if streamingCounter == 0 { stopTimer() }
+        guard streamingCounter == 0 else { return }
+
+        Self.logger.info("stopStream: tearing down capture + control client")
+
+        capture.stop()
+        capture.onFrame = nil
+        controlClient.stop()
     }
 
-    private func startTimer() {
-        let newTimer = DispatchSource.makeTimerSource(queue: timerQueue)
-        newTimer.schedule(deadline: .now(), repeating: .milliseconds(Int(1000 / fps)))
-        newTimer.setEventHandler { [weak self] in self?.emitFrame() }
-        newTimer.resume()
-        timer = newTimer
+    private func processFrame(pixelBuffer: CVPixelBuffer, timestamp: TimeInterval) {
+        let state = controlClient.currentState()
+        guard state.isEnabled, let pipeline else {
+            emitSampleBuffer(pixelBuffer: pixelBuffer, timestamp: timestamp)
+            return
+        }
+
+        let output: CVPixelBuffer
+        do {
+            output = try pipeline.process(
+                pixelBuffer: pixelBuffer,
+                timestamp: timestamp,
+                intensity: state.intensity
+            )
+        } catch {
+            Self.logger.error(
+                "pipeline.process failed: \(error.localizedDescription, privacy: .public) — emitting raw frame"
+            )
+            output = pixelBuffer
+        }
+        emitSampleBuffer(pixelBuffer: output, timestamp: timestamp)
     }
 
-    private func stopTimer() {
-        timer?.cancel()
-        timer = nil
-    }
-
-    private func emitFrame() {
-        guard let pixelBuffer = makeSolidColorPixelBuffer() else { return }
+    private func emitSampleBuffer(pixelBuffer: CVPixelBuffer, timestamp: TimeInterval) {
         var formatDesc: CMFormatDescription?
         CMVideoFormatDescriptionCreateForImageBuffer(
             allocator: kCFAllocatorDefault,
@@ -119,35 +169,6 @@ final class CameraExtensionStream: NSObject, CMIOExtensionStreamSource, @uncheck
             let hostTimeNs = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
             stream.send(buffer, discontinuity: [], hostTimeInNanoseconds: hostTimeNs)
         }
-    }
-
-    // TODO(phase3): replace per-frame `CVPixelBufferCreate` with a
-    // `CVPixelBufferPool` so the Phase 3 pipeline reuses IOSurface-backed
-    // buffers instead of allocating 60/sec.
-    private func makeSolidColorPixelBuffer() -> CVPixelBuffer? {
-        let attrs = [
-            kCVPixelBufferCGImageCompatibilityKey: true,
-            kCVPixelBufferCGBitmapContextCompatibilityKey: true,
-            kCVPixelBufferIOSurfacePropertiesKey: [:] as CFDictionary
-        ] as CFDictionary
-
-        var pb: CVPixelBuffer?
-        CVPixelBufferCreate(
-            kCFAllocatorDefault,
-            Int(width),
-            Int(height),
-            kCVPixelFormatType_32BGRA,
-            attrs,
-            &pb
-        )
-        guard let buffer = pb else { return nil }
-        CVPixelBufferLockBaseAddress(buffer, [])
-        if let base = CVPixelBufferGetBaseAddress(buffer) {
-            let count = CVPixelBufferGetBytesPerRow(buffer) * Int(height)
-            memset(base, 0x20, count)
-        }
-        CVPixelBufferUnlockBaseAddress(buffer, [])
-        return buffer
     }
 }
 

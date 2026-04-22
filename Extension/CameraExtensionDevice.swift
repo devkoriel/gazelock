@@ -4,6 +4,7 @@ import CoreMediaIO
 final class CameraExtensionDevice: NSObject, CMIOExtensionDeviceSource, @unchecked Sendable {
     private(set) var device: CMIOExtensionDevice!
     private var streamSource: CameraExtensionStream!
+    private let controlClient = ControlClient()
 
     init(localizedName: String, deviceID: UUID) {
         super.init()
@@ -14,7 +15,10 @@ final class CameraExtensionDevice: NSObject, CMIOExtensionDeviceSource, @uncheck
             source: self
         )
 
-        streamSource = CameraExtensionStream(localizedName: "\(localizedName) Stream")
+        streamSource = CameraExtensionStream(
+            localizedName: "\(localizedName) Stream",
+            controlClient: controlClient
+        )
         do {
             try device.addStream(streamSource.stream)
         } catch {

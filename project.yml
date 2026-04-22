@@ -68,6 +68,7 @@ targets:
     platform: macOS
     sources:
       - path: Extension
+      - path: Sources/GazeLock/Capture
       - path: Sources/GazeLock/Pipeline
       - path: Sources/Shared
     info:
