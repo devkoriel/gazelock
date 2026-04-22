@@ -12,6 +12,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var cameraCapture: CameraCapture!
     private var pipeline: FramePipeline!
 
+    // Main window (Phase 3c)
+    private var mainWindow: NSWindow?
+    private var calibrationStore: CalibrationStore!
+    private var appProfileObserver: AppProfileObserver!
+    private var overrides = AppProfileOverrides()
+
     // Preview state shown in the popover
     private var previewBefore: NSImage?
     private var previewAfter: NSImage?
@@ -19,9 +25,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupPipeline()
         setupControlPlane()
+        setupMainWindowDependencies()
         setupMenuBar()
         setupPopover()
         startCapture()
+    }
+
+    private func setupMainWindowDependencies() {
+        calibrationStore = CalibrationStore()
+
+        if let data = UserDefaults.standard.data(forKey: AppProfileOverridesDefaultsKey.key),
+           let saved = try? JSONDecoder().decode(AppProfileOverrides.self, from: data) {
+            overrides = saved
+        }
+        appProfileObserver = AppProfileObserver(
+            overrides: overrides,
+            defaultProfileId: controlStore.state.setupProfileId,
+            store: controlStore
+        )
+        appProfileObserver.start()
     }
 
     private func setupPipeline() {
@@ -70,8 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 set: { [weak self] in self?.previewAfter = $0 }
             ),
             onOpenWindow: { [weak self] in
-                // Phase 3c adds the real main window; stub here.
-                self?.presentInfo("Main window arrives in Phase 3c.")
+                self?.showMainWindow()
             }
         )
         popoverController.contentViewController = NSHostingController(rootView: root)
@@ -148,6 +169,65 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func showMainWindow() {
+        if mainWindow == nil {
+            let overridesBinding = Binding<AppProfileOverrides>(
+                get: { [weak self] in self?.overrides ?? AppProfileOverrides() },
+                set: { [weak self] newVal in self?.setAppProfileOverrides(newVal) }
+            )
+            let root = MainWindow(
+                store: controlStore,
+                calibrationStore: calibrationStore,
+                overrides: overridesBinding,
+                onLaunchCalibration: { [weak self] in self?.launchCalibration() },
+                onRunAutoDetect: { [weak self] in self?.runAutoDetect() }
+            )
+            let window = NSWindow(
+                contentRect: NSRect(
+                    x: 0, y: 0,
+                    width: MainWindowStyle.windowWidth,
+                    height: MainWindowStyle.windowHeight
+                ),
+                styleMask: [.titled, .closable, .miniaturizable, .resizable],
+                backing: .buffered,
+                defer: false
+            )
+            window.title = "GazeLock"
+            window.center()
+            window.contentViewController = NSHostingController(rootView: root)
+            window.isReleasedWhenClosed = false
+            window.delegate = self
+            mainWindow = window
+        }
+        NSApp.setActivationPolicy(.regular)
+        mainWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func setAppProfileOverrides(_ newVal: AppProfileOverrides) {
+        overrides = newVal
+        appProfileObserver?.setOverrides(newVal)
+        if let data = try? JSONEncoder().encode(newVal) {
+            UserDefaults.standard.set(data, forKey: AppProfileOverridesDefaultsKey.key)
+        }
+    }
+
+    private func launchCalibration() {
+        presentInfo("Calibration wizard arrives in P3c.8.")
+    }
+
+    private func runAutoDetect() {
+        let proposed = AutoDetect.proposeProfileLive()
+        let alert = NSAlert()
+        alert.messageText = "Detected: \(proposed.name)"
+        alert.informativeText = "Apply this setup?"
+        alert.addButton(withTitle: "Use it")
+        alert.addButton(withTitle: "Cancel")
+        if alert.runModal() == .alertFirstButtonReturn {
+            controlStore.setSetupProfileId(proposed.id)
+        }
+    }
+
     private func presentFatal(_ message: String) {
         let alert = NSAlert()
         alert.messageText = "GazeLock"
@@ -165,5 +245,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.alertStyle = .informational
         alert.addButton(withTitle: "OK")
         alert.runModal()
+    }
+}
+
+extension AppDelegate: NSWindowDelegate {
+    func windowWillClose(_ notification: Notification) {
+        if (notification.object as? NSWindow) === mainWindow {
+            NSApp.setActivationPolicy(.accessory)
+        }
     }
 }
