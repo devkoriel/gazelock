@@ -30,8 +30,7 @@ class TrainStepResult:
 def _infinite_iter(loader: DataLoader) -> Iterator[tuple[torch.Tensor, torch.Tensor]]:
     """Wrap a DataLoader to yield forever (wrap-around on StopIteration)."""
     while True:
-        for batch in loader:
-            yield batch
+        yield from loader
 
 
 def train_one_step(
@@ -102,7 +101,7 @@ def pick_device() -> torch.device:
 
 __all__ = [
     "TrainStepResult",
-    "train_one_step",
-    "train_for_n_steps",
     "pick_device",
+    "train_for_n_steps",
+    "train_one_step",
 ]

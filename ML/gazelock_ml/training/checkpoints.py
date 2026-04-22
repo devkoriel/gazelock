@@ -56,7 +56,7 @@ def write_run_manifest(path: Path, data: dict) -> None:
 
 __all__ = [
     "CheckpointMetadata",
-    "save_checkpoint",
     "load_checkpoint",
+    "save_checkpoint",
     "write_run_manifest",
 ]

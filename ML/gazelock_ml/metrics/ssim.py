@@ -1,9 +1,9 @@
-"""Simplified SSIM — 11×11 Gaussian window, per-channel mean."""
+"""Simplified SSIM — 11x11 Gaussian window, per-channel mean."""
 
 from __future__ import annotations
 
 import torch
-import torch.nn.functional as F
+import torch.nn.functional as functional
 
 _K1 = 0.01
 _K2 = 0.03
@@ -31,15 +31,15 @@ def ssim(
     c1 = (_K1 * max_val) ** 2
     c2 = (_K2 * max_val) ** 2
 
-    mu_x = F.conv2d(pred, window, padding=window_size // 2, groups=channels)
-    mu_y = F.conv2d(target, window, padding=window_size // 2, groups=channels)
+    mu_x = functional.conv2d(pred, window, padding=window_size // 2, groups=channels)
+    mu_y = functional.conv2d(target, window, padding=window_size // 2, groups=channels)
     mu_x2 = mu_x * mu_x
     mu_y2 = mu_y * mu_y
     mu_xy = mu_x * mu_y
 
-    sigma_x2 = F.conv2d(pred * pred, window, padding=window_size // 2, groups=channels) - mu_x2
-    sigma_y2 = F.conv2d(target * target, window, padding=window_size // 2, groups=channels) - mu_y2
-    sigma_xy = F.conv2d(pred * target, window, padding=window_size // 2, groups=channels) - mu_xy
+    sigma_x2 = functional.conv2d(pred * pred, window, padding=window_size // 2, groups=channels) - mu_x2
+    sigma_y2 = functional.conv2d(target * target, window, padding=window_size // 2, groups=channels) - mu_y2
+    sigma_xy = functional.conv2d(pred * target, window, padding=window_size // 2, groups=channels) - mu_xy
 
     num = (2.0 * mu_xy + c1) * (2.0 * sigma_xy + c2)
     den = (mu_x2 + mu_y2 + c1) * (sigma_x2 + sigma_y2 + c2)

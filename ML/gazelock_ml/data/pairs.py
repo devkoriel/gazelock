@@ -5,7 +5,7 @@ target-gaze offset to produce the ``warped`` view. The refiner's training
 objective is to recover the original from ``(warped, original)``.
 
 The randomised offset simulates the distribution of target gazes the
-refiner will see at inference: small (5–15°) corrections that move the
+refiner will see at inference: small (5-15 deg) corrections that move the
 iris toward the camera. The pair synthesiser does NOT itself generate
 new identities or new photographic content — it only warps real data
 that was sourced from UnityEyes / FFHQ / procedural fixtures.

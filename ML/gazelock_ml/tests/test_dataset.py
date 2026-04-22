@@ -25,7 +25,7 @@ def test_iterdataset_yields_expected_shapes() -> None:
         assert tgt.shape == (3, EYE_ROI_H, EYE_ROI_W)
         assert inp.dtype == torch.float32
         assert tgt.dtype == torch.float32
-        assert 0.0 <= inp.min().item() and inp.max().item() <= 1.0
+        assert inp.min().item() >= 0.0 and inp.max().item() <= 1.0
 
 
 def test_dataloader_batches_correctly() -> None:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import torch
-import torch.nn.functional as F
+import torch.nn.functional as functional
 
 from gazelock_ml.models.eye_encoder import EyeIdentityEncoder
 
@@ -19,7 +19,7 @@ def identity_cosine(
     with torch.no_grad():
         ep = enc(pred)
         et = enc(target)
-    cos = F.cosine_similarity(ep, et, dim=1)
+    cos = functional.cosine_similarity(ep, et, dim=1)
     return float(cos.mean().item())
 
 

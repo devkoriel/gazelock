@@ -77,3 +77,38 @@ help:
 	@echo "  make clean        -> Remove build artifacts + generated project"
 	@echo "  make run          -> Build and open the app"
 	@echo "  make setup        -> Install dev tools via Homebrew"
+
+# -------- ML / Python pipeline --------
+
+.PHONY: ml-setup ml-test ml-test-slow ml-lint ml-train ml-eval ml-export ml-verify
+
+ml-setup:
+	@echo "==> Installing Python dev dependencies via uv"
+	@uv sync --extra dev
+
+ml-test:
+	@echo "==> Running ML test suite (fast tests only)"
+	@uv run python -m pytest ML/gazelock_ml/tests -m "not slow" -v
+
+ml-test-slow:
+	@echo "==> Running ML test suite (including slow tests — Core ML export)"
+	@uv run python -m pytest ML/gazelock_ml/tests -v
+
+ml-lint:
+	@echo "==> Linting ML package with ruff"
+	@uv run ruff check ML/gazelock_ml
+
+ml-train:
+	@echo "==> Smoke training run (10 steps on fixtures)"
+	@uv run gazelock-train --steps 10 --batch-size 4 --output-dir weights/debug
+
+ml-eval:
+	@echo "==> Evaluating weights/debug/final.pt"
+	@uv run gazelock-eval --checkpoint weights/debug/final.pt
+
+ml-export:
+	@echo "==> Exporting to Core ML"
+	@uv run gazelock-export --checkpoint weights/debug/final.pt --output weights/refiner.mlpackage
+
+ml-verify: ml-lint ml-test
+	@echo "==> ml-verify: lint + test passed"
