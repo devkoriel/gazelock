@@ -231,7 +231,7 @@ Refined output → alpha-blend back into the full frame via a **feathered Gaussi
 - Weights: `gazelock-refiner-v{semver}.mlpackage`.
 - Tracked in **Git LFS** in the repo; also published as GitHub Release assets.
 - Training script, seed, and data manifest (hash of UnityEyes render params + FFHQ crop file list) committed for end-to-end reproducibility.
-- The app embeds the weight version in its bundle; optional opt-in update check against GitHub Releases.
+- The app embeds the weight version in its bundle. Weight updates ship bundled with app updates via the unified GitHub Releases update channel (§ 9.4) — no separate weights-only update path.
 
 ---
 
@@ -370,9 +370,10 @@ gazelock/
 │   └── eval/                       (quality metrics + blind-AB harness)
 ├── weights/                        (Git LFS)
 ├── docs/
-│   ├── design.md                   (copy of this spec)
+│   ├── design.md                   (contributor-facing current design, maintained)
 │   ├── architecture.md
-│   └── reference/                  (paper citations, research journal)
+│   ├── reference/                  (paper citations, research journal)
+│   └── superpowers/specs/          (dated brainstorm artifacts — this spec lives here)
 └── scripts/                        (build, release, train)
 ```
 
@@ -436,6 +437,8 @@ Items intentionally not nailed down in this spec; owned by the implementation pl
 - Calibration UX details (target spacing, dwell time per target, skip option)
 - Blind A/B harness hosting specifics (Firebase project vs. simpler Google Form backend)
 - Handling of archived prior source (`gazelock.archive-2026-01-26/`) during rebuild
+- Pipeline behavior when landmark detection fails or is low-confidence (pass-through raw frame vs. hold previous corrected frame vs. menu-bar warning state)
+- Global-shortcut registration mechanism for `⌘⇧G` (NSEvent global monitor vs. CGEventTap; Accessibility-permission flow on first launch)
 
 ## Appendix C — References
 
