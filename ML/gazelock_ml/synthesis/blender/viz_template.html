@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GazeLock Render Dashboard</title>
+<style>
+  :root {
+    --bg: #000;
+    --fg: rgba(255, 255, 255, 0.95);
+    --muted: rgba(255, 255, 255, 0.55);
+    --accent: #00ff88;
+    --elev: #1c1c1e;
+    --border: #2a2a2d;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 24px; }
+  h1 { font-size: 13px; letter-spacing: 2px; font-weight: 600; margin: 0 0 24px; }
+  h1 .dot { display: inline-block; width: 8px; height: 8px; background: var(--accent); border-radius: 50%; margin-right: 8px; box-shadow: 0 0 10px var(--accent); }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .card { background: var(--elev); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .card .label { font-size: 9px; letter-spacing: 1.5px; color: var(--muted); }
+  .card .value { font-size: 22px; font-family: ui-monospace, monospace; color: var(--accent); margin-top: 6px; }
+  .card .sub { font-size: 10px; color: var(--muted); margin-top: 4px; }
+  .progress { background: var(--elev); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 24px; }
+  .bar { height: 6px; background: #111; border-radius: 3px; overflow: hidden; margin-top: 10px; }
+  .bar .fill { height: 100%; background: var(--accent); transition: width 500ms ease; box-shadow: 0 0 8px var(--accent); }
+  .thumbs { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+  .thumbs img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 4px; border: 1px solid var(--border); }
+  .footer { margin-top: 24px; font-size: 10px; color: var(--muted); text-align: center; }
+</style>
+</head>
+<body>
+<h1><span class="dot"></span>GAZELOCK &middot; RENDER DASHBOARD</h1>
+
+<div class="grid">
+  <div class="card">
+    <div class="label">FRAMES</div>
+    <div class="value" id="count">&mdash;</div>
+    <div class="sub" id="count-sub"></div>
+  </div>
+  <div class="card">
+    <div class="label">ETA</div>
+    <div class="value" id="eta">&mdash;</div>
+    <div class="sub" id="eta-sub"></div>
+  </div>
+  <div class="card">
+    <div class="label">AVG/FRAME</div>
+    <div class="value" id="avg">&mdash;</div>
+    <div class="sub" id="avg-sub"></div>
+  </div>
+  <div class="card">
+    <div class="label">ELAPSED</div>
+    <div class="value" id="elapsed">&mdash;</div>
+    <div class="sub" id="elapsed-sub"></div>
+  </div>
+</div>
+
+<div class="progress">
+  <div class="label" style="font-size: 9px; letter-spacing: 1.5px; color: rgba(255,255,255,0.55);">PROGRESS</div>
+  <div class="value" id="pct" style="font-size: 22px; font-family: ui-monospace, monospace; color: var(--accent); margin-top: 6px;">&mdash;</div>
+  <div class="bar"><div class="fill" id="fill" style="width: 0%"></div></div>
+</div>
+
+<div class="card">
+  <div class="label">LATEST FRAMES</div>
+  <div id="thumbs" class="thumbs" style="margin-top: 12px;"></div>
+</div>
+
+<div class="footer" id="footer">last refresh: &mdash;</div>
+
+<script>
+async function refresh() {
+  try {
+    const r = await fetch("/stats.json", {cache: "no-store"});
+    const s = await r.json();
+    document.getElementById("count").textContent = s.count.toLocaleString();
+    document.getElementById("count-sub").textContent = "of " + s.total.toLocaleString();
+    document.getElementById("pct").textContent = (s.pct * 100).toFixed(2) + "%";
+    document.getElementById("fill").style.width = (s.pct * 100) + "%";
+    document.getElementById("eta").textContent = s.eta_human || "—";
+    document.getElementById("eta-sub").textContent = s.eta_done_at || "";
+    document.getElementById("avg").textContent = s.avg_seconds.toFixed(2) + "s";
+    document.getElementById("avg-sub").textContent = "rolling 200-frame";
+    document.getElementById("elapsed").textContent = s.elapsed_human || "—";
+    document.getElementById("elapsed-sub").textContent = s.started_at || "";
+
+    const t = document.getElementById("thumbs");
+    t.innerHTML = "";
+    for (const f of s.latest_frames) {
+      const img = document.createElement("img");
+      img.src = "/frame/" + f.png_path + "?t=" + Date.now();
+      img.alt = f.frame_id;
+      t.appendChild(img);
+    }
+    document.getElementById("footer").textContent = "last refresh: " + new Date().toLocaleTimeString();
+  } catch (e) {
+    document.getElementById("footer").textContent = "refresh failed: " + e;
+  }
+}
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>
