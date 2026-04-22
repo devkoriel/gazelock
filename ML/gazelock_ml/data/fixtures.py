@@ -1,7 +1,7 @@
 """Procedural fixture generator for unit tests.
 
 These patches do NOT look like real eyes — they're deterministic
-synthetic gradients sized like eye ROIs (96×72 BGR). The point is to
+synthetic gradients sized like eye ROIs (96x72 BGR). The point is to  # noqa: RUF002
 exercise shape/dtype contracts in downstream code, not to train on.
 Real training data comes from UnityEyes + FFHQ at runtime.
 """
@@ -59,10 +59,9 @@ def make_fake_eye_pair(
     shifted = np.zeros_like(base)
     dx, dy = target_offset_px
 
-    # Shift iris region (center 20×20) by (dx, dy)
+    # Shift iris region (center 20x20) by (dx, dy)
     h_start = EYE_ROI_H // 2 - 10
     w_start = EYE_ROI_W // 2 - 10
-    iris_region = base[h_start : h_start + 20, w_start : w_start + 20].copy()
 
     shifted[:] = base
     shifted[h_start : h_start + 20, w_start : w_start + 20] = base[

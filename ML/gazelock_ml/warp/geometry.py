@@ -82,7 +82,7 @@ def compute_target_iris_px(
     # Displacement from eyeball center to target iris position, in mm
     disp_mm = EYEBALL_RADIUS_MM * cam_dir_head  # 3D
     # Project onto image plane (ignore z — orthographic approximation
-    # adequate for small 5–15° correction angles)
+    # adequate for small 5-15 degree correction angles)
     dx_px = disp_mm[0] * px_per_mm
     dy_px = -disp_mm[1] * px_per_mm  # flip y for image coordinates
 

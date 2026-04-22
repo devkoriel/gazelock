@@ -21,7 +21,7 @@ from gazelock_ml.data.fixtures import EYE_ROI_H, EYE_ROI_W
 
 
 def _synthesize_face(seed: int = 0) -> np.ndarray:
-    """Build a 512×512 RGB pseudo-face with visible eye-like ellipses."""
+    """Build a 512x512 RGB pseudo-face with visible eye-like ellipses."""
     rng = np.random.default_rng(seed)
     img = np.full((512, 512, 3), 200, dtype=np.uint8) - rng.integers(0, 40, (512, 512, 3), dtype=np.uint8)
     # Draw two eye ellipses at predictable positions

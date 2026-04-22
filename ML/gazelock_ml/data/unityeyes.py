@@ -1,7 +1,7 @@
 """Loader for UnityEyes synthetic-pair data.
 
 UnityEyes (Wood et al. 2016) exports each rendered sample as:
-    <idx>.jpg  — 800×600 RGB rendering
+    <idx>.jpg  — 800x600 RGB rendering  # noqa: RUF002
     <idx>.json — gaze/head metadata
 
 For the seam-hider refiner we consume PAIRS of renders sharing the

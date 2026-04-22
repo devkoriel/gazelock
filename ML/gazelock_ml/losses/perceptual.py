@@ -8,10 +8,9 @@ loss is mean MSE over the selected feature-map pairs.
 from __future__ import annotations
 
 import torch
-import torch.nn.functional as F
+import torch.nn.functional as F  # noqa: N812
 from torch import nn
 from torchvision.models import VGG16_Weights, vgg16
-
 
 _VGG_MEAN = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
 _VGG_STD = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)

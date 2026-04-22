@@ -68,7 +68,6 @@ def eval_tps(
 ) -> np.ndarray:
     """Evaluate fitted TPS at arbitrary query points. Returns (M, 2)."""
     n = source_points.shape[0]
-    m = query_points.shape[0]
 
     diff = query_points[:, None, :] - source_points[None, :, :]  # (M, N, 2)
     r2 = np.sum(diff * diff, axis=-1)  # (M, N)
@@ -98,4 +97,4 @@ def flow_field_from_tps(
     return out.reshape(grid_h, grid_w, 2)
 
 
-__all__ = ["fit_tps", "eval_tps", "flow_field_from_tps"]
+__all__ = ["eval_tps", "fit_tps", "flow_field_from_tps"]

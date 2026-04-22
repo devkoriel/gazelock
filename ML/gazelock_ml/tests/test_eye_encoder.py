@@ -23,7 +23,7 @@ def test_embedding_shape_and_norm() -> None:
 
 def test_encoder_param_count_reasonable() -> None:
     params = count_parameters(EyeIdentityEncoder())
-    # Target ~180k, allow 100k–300k
+    # Target ~180k, allow 100k-300k
     assert 100_000 <= params <= 300_000, f"unexpected params: {params}"
 
 

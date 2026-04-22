@@ -1,7 +1,7 @@
 """FFHQ eye-crop extractor.
 
 FFHQ (Karras et al. 2019) ships as a directory of square RGB face
-images at various resolutions. We crop a fixed-size eye ROI (96×72)
+images at various resolutions. We crop a fixed-size eye ROI (96x72)  # noqa: RUF002
 centered on the iris using a lightweight landmark detector.
 
 For reproducibility we use OpenCV's built-in Haar cascade as a fallback
@@ -109,4 +109,4 @@ def _load_builtin_cascade(name: str) -> cv2.CascadeClassifier:
     return cv2.CascadeClassifier(str(path))
 
 
-__all__ = ["FFHQEyeExtractor", "EyeCrop"]
+__all__ = ["EyeCrop", "FFHQEyeExtractor"]
