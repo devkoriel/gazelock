@@ -1,7 +1,9 @@
 import AppKit
+import AVFoundation
 import CoreVideo
 import Foundation
 import SwiftUI
+import SystemExtensions
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -27,6 +29,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var calibrationHost: NSHostingController<CalibrationWizard>?
     private var calibrationDetector: LandmarkDetector?
 
+    // Onboarding (P3c.11)
+    private let onboardingDefaultsKey = "hasCompletedOnboarding"
+    private var onboardingWindow: NSWindow?
+    private var onboardingCoord: OnboardingCoordinator?
+    private var systemExtensionDelegate: SystemExtensionDelegate?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupPipeline()
         setupControlPlane()
@@ -34,6 +42,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupMenuBar()
         setupPopover()
         startCapture()
+
+        if !UserDefaults.standard.bool(forKey: onboardingDefaultsKey) {
+            showOnboarding()
+        }
     }
 
     private func setupMainWindowDependencies() {
@@ -285,6 +297,74 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func showOnboarding() {
+        let coord = OnboardingCoordinator()
+        onboardingCoord = coord
+
+        let sheet = OnboardingSheet(
+            coordinator: coord,
+            onFinish: { [weak self] pickedProfileId in
+                guard let self else { return }
+                UserDefaults.standard.set(true, forKey: self.onboardingDefaultsKey)
+                self.controlStore.setSetupProfileId(pickedProfileId)
+                self.dismissOnboarding()
+                self.showMainWindow()
+            },
+            onRequestExtensionInstall: { [weak self] in self?.requestExtensionInstall() },
+            onRequestCameraPermission: { [weak self] in
+                guard let self else { return false }
+                return await self.requestCameraPermission()
+            }
+        )
+        let host = NSHostingController(rootView: sheet)
+        let window = NSWindow(contentViewController: host)
+        window.title = "Welcome to GazeLock"
+        window.styleMask = [.titled, .closable]
+        window.center()
+        window.isReleasedWhenClosed = false
+        onboardingWindow = window
+        NSApp.setActivationPolicy(.regular)
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func dismissOnboarding() {
+        onboardingWindow?.close()
+        onboardingWindow = nil
+        onboardingCoord = nil
+    }
+
+    private func requestExtensionInstall() {
+        let delegate = SystemExtensionDelegate(onResult: { [weak self] activated in
+            Task { @MainActor in
+                self?.onboardingCoord?.extensionActivated = activated
+            }
+        })
+        systemExtensionDelegate = delegate
+
+        let req = OSSystemExtensionRequest.activationRequest(
+            forExtensionWithIdentifier: "com.gazelock.GazeLock.CameraExtension",
+            queue: .main
+        )
+        req.delegate = delegate
+        OSSystemExtensionManager.shared.submitRequest(req)
+    }
+
+    private func requestCameraPermission() async -> Bool {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            return true
+        case .notDetermined:
+            return await withCheckedContinuation { cont in
+                AVCaptureDevice.requestAccess(for: .video) { granted in
+                    cont.resume(returning: granted)
+                }
+            }
+        default:
+            return false
+        }
+    }
+
     private func presentFatal(_ message: String) {
         let alert = NSAlert()
         alert.messageText = "GazeLock"
@@ -310,5 +390,46 @@ extension AppDelegate: NSWindowDelegate {
         if (notification.object as? NSWindow) === mainWindow {
             NSApp.setActivationPolicy(.accessory)
         }
+    }
+}
+
+/// Bridge for `OSSystemExtensionRequest` callbacks during onboarding.
+/// Not main-actor isolated; hops back to the main actor inside `onResult`.
+final class SystemExtensionDelegate: NSObject, OSSystemExtensionRequestDelegate, @unchecked Sendable {
+    private let onResult: @Sendable (Bool) -> Void
+
+    init(onResult: @escaping @Sendable (Bool) -> Void) {
+        self.onResult = onResult
+    }
+
+    func request(
+        _ request: OSSystemExtensionRequest,
+        actionForReplacingExtension existing: OSSystemExtensionProperties,
+        withExtension ext: OSSystemExtensionProperties
+    ) -> OSSystemExtensionRequest.ReplacementAction {
+        return .replace
+    }
+
+    func requestNeedsUserApproval(_ request: OSSystemExtensionRequest) {
+        // User needs to approve in System Settings. Not yet activated.
+    }
+
+    func request(
+        _ request: OSSystemExtensionRequest,
+        didFinishWithResult result: OSSystemExtensionRequest.Result
+    ) {
+        switch result {
+        case .completed:
+            onResult(true)
+        case .willCompleteAfterReboot:
+            // Treat as activated for UX purposes (the reboot dialog drives the rest).
+            onResult(true)
+        @unknown default:
+            onResult(false)
+        }
+    }
+
+    func request(_ request: OSSystemExtensionRequest, didFailWithError error: Error) {
+        onResult(false)
     }
 }
