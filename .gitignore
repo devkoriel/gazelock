@@ -1,0 +1,60 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Xcode — we use XcodeGen; .xcodeproj is generated
+*.xcodeproj
+*.xcworkspace
+build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Testing
+*.xcresult
+coverage/
+
+# Python / ML (used in Phase 2)
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Secrets
+.env
+.env.*
+*.p12
+*.mobileprovision
+*.provisionprofile
+
+# Distribution
+*.dmg
+*.pkg
+
+# Visual-companion session files
+.superpowers/
+
+# Agent tooling scratch
+.serena/
+.claude/
+.playwright-mcp/
+
+# NOTE: ML weights (.mlpackage) are tracked via Git LFS starting in
+# Phase 2 — intentionally NOT in this .gitignore. weights/ is committed.
