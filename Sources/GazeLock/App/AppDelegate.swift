@@ -179,6 +179,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 store: controlStore,
                 calibrationStore: calibrationStore,
                 overrides: overridesBinding,
+                beforeImage: Binding(
+                    get: { [weak self] in self?.previewBefore },
+                    set: { [weak self] in self?.previewBefore = $0 }
+                ),
+                afterImage: Binding(
+                    get: { [weak self] in self?.previewAfter },
+                    set: { [weak self] in self?.previewAfter = $0 }
+                ),
                 onLaunchCalibration: { [weak self] in self?.launchCalibration() },
                 onRunAutoDetect: { [weak self] in self?.runAutoDetect() }
             )

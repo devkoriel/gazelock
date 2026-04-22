@@ -27,6 +27,8 @@ public struct MainWindow: View {
     @Bindable var store: ControlStateStore
     var calibrationStore: CalibrationStore
     @Binding var overrides: AppProfileOverrides
+    @Binding var beforeImage: NSImage?
+    @Binding var afterImage: NSImage?
     var onLaunchCalibration: () -> Void
     var onRunAutoDetect: () -> Void
 
@@ -36,12 +38,16 @@ public struct MainWindow: View {
         store: ControlStateStore,
         calibrationStore: CalibrationStore,
         overrides: Binding<AppProfileOverrides>,
+        beforeImage: Binding<NSImage?>,
+        afterImage: Binding<NSImage?>,
         onLaunchCalibration: @escaping () -> Void,
         onRunAutoDetect: @escaping () -> Void
     ) {
         self.store = store
         self.calibrationStore = calibrationStore
         self._overrides = overrides
+        self._beforeImage = beforeImage
+        self._afterImage = afterImage
         self.onLaunchCalibration = onLaunchCalibration
         self.onRunAutoDetect = onRunAutoDetect
     }
@@ -74,7 +80,7 @@ public struct MainWindow: View {
     private var detailView: some View {
         switch selection {
         case .dashboard:
-            DashboardSection(store: store)
+            DashboardSection(store: store, beforeImage: $beforeImage, afterImage: $afterImage)
         case .setup:
             SetupSection(
                 store: store,
