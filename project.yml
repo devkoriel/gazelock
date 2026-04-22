@@ -38,6 +38,7 @@ targets:
     sources:
       - path: Sources/GazeLock
       - path: Sources/Shared
+      - path: Extension/ControlClient.swift
     resources:
       - path: Sources/GazeLock/Resources
     info:

@@ -1,16 +1,16 @@
 import Foundation
 
-/// Extension-side NSXPC client. Connects to the main app's
-/// ControlServer and caches the current ControlState. Thread-safe;
-/// readers call `currentState()` from any queue.
-public final class ControlClient {
+/// Extension-side NSXPC client. Receives pushed state updates from the
+/// main app's ControlServer (Phase 3c push-XPC, spec §8.11). Still
+/// falls back to `fetchControlState` on initial connect.
+public final class ControlClient: NSObject, @unchecked Sendable {
     private var connection: NSXPCConnection?
     private var cachedState = ControlState.default
     private let queue = DispatchQueue(label: "com.gazelock.GazeLock.ControlClient.cache")
     private let retryQueue = DispatchQueue(label: "com.gazelock.GazeLock.ControlClient.retry")
     private var retryTimer: DispatchSourceTimer?
 
-    public init() {}
+    public override init() { super.init() }
 
     public func currentState() -> ControlState {
         queue.sync { cachedState }
@@ -34,6 +34,10 @@ public final class ControlClient {
             options: []
         )
         conn.remoteObjectInterface = NSXPCInterface(with: ControlServiceProtocol.self)
+        // Expose our side of the protocol so the server can push to us.
+        conn.exportedInterface = NSXPCInterface(with: ControlServiceProtocol.self)
+        conn.exportedObject = self
+
         conn.interruptionHandler = { [weak self] in
             self?.connection = nil
         }
@@ -68,5 +72,27 @@ public final class ControlClient {
         }
         timer.resume()
         retryTimer = timer
+    }
+}
+
+extension ControlClient: ControlServiceProtocol {
+    public func fetchControlState(reply: @escaping (Data) -> Void) {
+        // Server shouldn't need to ask the extension for state; ack empty.
+        reply(Data())
+    }
+
+    public func pushControlState(_ payload: Data, reply: @escaping (Bool) -> Void) {
+        guard let state = try? JSONDecoder().decode(ControlState.self, from: payload) else {
+            reply(false)
+            return
+        }
+        queue.sync {
+            self.cachedState = state
+        }
+        reply(true)
+    }
+
+    public func ping(reply: @escaping (Bool) -> Void) {
+        reply(true)
     }
 }
