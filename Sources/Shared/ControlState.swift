@@ -7,31 +7,53 @@ import Foundation
 /// Keep this type small — every field is serialised across process
 /// boundaries on every update.
 public struct ControlState: Codable, Sendable, Equatable {
-    /// Is gaze correction active?
     public var isEnabled: Bool
-
-    /// [0, 1] — scales the target-gaze displacement pre-warp.
-    /// 0 = passthrough, 1 = full correction.
     public var intensity: Double
-
-    /// Which physical camera to capture from.
     public var sourceCameraUniqueID: String?
-
-    /// Active preset name (for Phase 3c's main-window tabs). Phase 3b
-    /// carries the field but does not read it.
     public var activePresetName: String
+
+    // Phase 3b.5: natural gaze adaptation
+    public var setupProfileId: String
+    public var verticalAimDeg: Double
+    public var horizontalAimDeg: Double
+    public var sensitivity: Sensitivity
 
     public init(
         isEnabled: Bool = true,
         intensity: Double = 0.7,
         sourceCameraUniqueID: String? = nil,
-        activePresetName: String = "Default"
+        activePresetName: String = "Default",
+        setupProfileId: String = BuiltinProfiles.externalTop.id,
+        verticalAimDeg: Double = -2.0,
+        horizontalAimDeg: Double = 0.0,
+        sensitivity: Sensitivity = .normal
     ) {
         self.isEnabled = isEnabled
         self.intensity = intensity
         self.sourceCameraUniqueID = sourceCameraUniqueID
         self.activePresetName = activePresetName
+        self.setupProfileId = setupProfileId
+        self.verticalAimDeg = verticalAimDeg
+        self.horizontalAimDeg = horizontalAimDeg
+        self.sensitivity = sensitivity
     }
 
     public static let `default` = ControlState()
+
+    enum CodingKeys: String, CodingKey {
+        case isEnabled, intensity, sourceCameraUniqueID, activePresetName
+        case setupProfileId, verticalAimDeg, horizontalAimDeg, sensitivity
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        isEnabled = try c.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
+        intensity = try c.decodeIfPresent(Double.self, forKey: .intensity) ?? 0.7
+        sourceCameraUniqueID = try c.decodeIfPresent(String.self, forKey: .sourceCameraUniqueID)
+        activePresetName = try c.decodeIfPresent(String.self, forKey: .activePresetName) ?? "Default"
+        setupProfileId = try c.decodeIfPresent(String.self, forKey: .setupProfileId) ?? BuiltinProfiles.externalTop.id
+        verticalAimDeg = try c.decodeIfPresent(Double.self, forKey: .verticalAimDeg) ?? -2.0
+        horizontalAimDeg = try c.decodeIfPresent(Double.self, forKey: .horizontalAimDeg) ?? 0.0
+        sensitivity = try c.decodeIfPresent(Sensitivity.self, forKey: .sensitivity) ?? .normal
+    }
 }
