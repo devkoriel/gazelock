@@ -16,6 +16,12 @@ final class CameraExtensionStream: NSObject, CMIOExtensionStreamSource, @uncheck
 
     private var streamingCounter: Int = 0
 
+    // Guards against `stream.send` racing with teardown: `AVCaptureSession.stopRunning()`
+    // does not synchronously drain in-flight frames, so a frame dispatched just before
+    // `stopStream` can otherwise reach `emitSampleBuffer` after the stream is torn down.
+    private let stateLock = NSLock()
+    private var isStreaming = false  // guarded by stateLock
+
     private let width: Int32 = 1280
     private let height: Int32 = 720
     private let fps: Int32 = 60
@@ -93,6 +99,7 @@ final class CameraExtensionStream: NSObject, CMIOExtensionStreamSource, @uncheck
             self?.processFrame(pixelBuffer: pixelBuffer, timestamp: timestamp)
         }
 
+        // TODO(phase3c): observe ControlState changes and restart capture if sourceCameraUniqueID changes mid-stream.
         let sourceID = controlClient.currentState().sourceCameraUniqueID
         do {
             try capture.start(deviceUniqueID: sourceID)
@@ -103,6 +110,7 @@ final class CameraExtensionStream: NSObject, CMIOExtensionStreamSource, @uncheck
             streamingCounter = 0
             throw error
         }
+        stateLock.withLock { self.isStreaming = true }
     }
 
     func stopStream() throws {
@@ -111,6 +119,8 @@ final class CameraExtensionStream: NSObject, CMIOExtensionStreamSource, @uncheck
 
         Self.logger.info("stopStream: tearing down capture + control client")
 
+        // Drop any in-flight frames before they can reach `stream.send` post-teardown.
+        stateLock.withLock { self.isStreaming = false }
         capture.stop()
         capture.onFrame = nil
         controlClient.stop()
@@ -140,13 +150,21 @@ final class CameraExtensionStream: NSObject, CMIOExtensionStreamSource, @uncheck
     }
 
     private func emitSampleBuffer(pixelBuffer: CVPixelBuffer, timestamp: TimeInterval) {
+        // Drop frames that arrive after teardown has begun; prevents `stream.send`
+        // on a torn-down CMIO stream.
+        let canSend = stateLock.withLock { self.isStreaming }
+        guard canSend else { return }
+
         var formatDesc: CMFormatDescription?
-        CMVideoFormatDescriptionCreateForImageBuffer(
+        let fdStatus = CMVideoFormatDescriptionCreateForImageBuffer(
             allocator: kCFAllocatorDefault,
             imageBuffer: pixelBuffer,
             formatDescriptionOut: &formatDesc
         )
-        guard let desc = formatDesc else { return }
+        guard fdStatus == noErr, let desc = formatDesc else {
+            Self.logger.error("CMVideoFormatDescriptionCreateForImageBuffer failed: \(fdStatus)")
+            return
+        }
 
         let hostTime = CMClockGetTime(CMClockGetHostTimeClock())
         var timingInfo = CMSampleTimingInfo(
@@ -155,20 +173,23 @@ final class CameraExtensionStream: NSObject, CMIOExtensionStreamSource, @uncheck
             decodeTimeStamp: .invalid
         )
         var sampleBuffer: CMSampleBuffer?
-        CMSampleBufferCreateReadyWithImageBuffer(
+        let sbStatus = CMSampleBufferCreateReadyWithImageBuffer(
             allocator: kCFAllocatorDefault,
             imageBuffer: pixelBuffer,
             formatDescription: desc,
             sampleTiming: &timingInfo,
             sampleBufferOut: &sampleBuffer
         )
-        if let buffer = sampleBuffer {
-            // `hostTimeInNanoseconds` expects nanoseconds; `mach_absolute_time()`
-            // returns Mach ticks (≈ 41.67 ns per tick on Apple Silicon), so we
-            // use the nanosecond-native clock API instead.
-            let hostTimeNs = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
-            stream.send(buffer, discontinuity: [], hostTimeInNanoseconds: hostTimeNs)
+        guard sbStatus == noErr, let buffer = sampleBuffer else {
+            Self.logger.error("CMSampleBufferCreateReadyWithImageBuffer failed: \(sbStatus)")
+            return
         }
+
+        // `hostTimeInNanoseconds` expects nanoseconds; `mach_absolute_time()`
+        // returns Mach ticks (≈ 41.67 ns per tick on Apple Silicon), so we
+        // use the nanosecond-native clock API instead.
+        let hostTimeNs = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
+        stream.send(buffer, discontinuity: [], hostTimeInNanoseconds: hostTimeNs)
     }
 }
 
