@@ -50,7 +50,10 @@ def setup_scene(render_w: int = 256, render_h: int = 256, samples: int = 64) -> 
         cam_obj = bpy.data.objects.new("RenderCam", cam_data)
         bpy.context.collection.objects.link(cam_obj)
         cam_obj.location = (0.0, 0.0, 0.05)
-        cam_obj.rotation_euler = (3.14159, 0.0, 0.0)
+        # Default Blender camera looks down its local -Z; at (0, 0, +0.05)
+        # with rotation (0, 0, 0) it looks toward world origin where the
+        # eye is built. Do NOT rotate — doing so points the camera away.
+        cam_obj.rotation_euler = (0.0, 0.0, 0.0)
         scene.camera = cam_obj
     if "Cube" in bpy.data.objects:
         bpy.data.objects.remove(bpy.data.objects["Cube"], do_unlink=True)
