@@ -6,7 +6,7 @@ GazeLock installs a virtual camera that appears as "GazeLock Camera" in any vide
 
 ## Status
 
-**v2, pre-alpha.** Under active reconstruction per the design spec at `docs/superpowers/specs/2026-04-22-gazelock-design.md`. Not yet functional.
+**v2, pre-alpha.** Under active reconstruction. Not yet functional.
 
 ## Requirements
 
@@ -43,7 +43,7 @@ GazeLock processes all video locally on your device. No video or telemetry leave
 
 The application code is MIT-licensed (see `LICENSE`).
 
-Starting in Phase 2, training code uses **UnityEyes** synthetic data (free for academic and non-commercial use). GazeLock's distribution is non-commercial (open-source publish + personal use + portfolio), so this is compatible. If you plan to redistribute trained weights commercially, you must replace the UnityEyes data pipeline. See `docs/superpowers/specs/2026-04-22-gazelock-design.md` §7.1.
+Starting in Phase 2, training code uses **UnityEyes** synthetic data (free for academic and non-commercial use). If you plan to redistribute trained weights commercially, you must replace the UnityEyes data pipeline with a permissive alternative.
 
 ## Contributing
 

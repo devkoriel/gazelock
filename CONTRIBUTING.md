@@ -36,6 +36,5 @@
 
 ## Reference
 
-- Design spec: `docs/superpowers/specs/2026-04-22-gazelock-design.md`
 - Architecture: `docs/architecture.md` (maintained, contributor-facing)
 - Research references: `docs/reference/`

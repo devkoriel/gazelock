@@ -56,6 +56,9 @@ __pycache__/
 .claude/
 .playwright-mcp/
 
+# Internal design documentation — kept local, not published.
+docs/superpowers/
+
 # ML weights: debug/smoke artefacts are ephemeral — not committed.
 # Release .mlpackage goes to Git LFS in Phase 4.
 weights/debug/
