@@ -46,9 +46,15 @@ def _parse_mixer_weights(spec: str) -> dict[str, float]:
 def _build_source_mixer(args: argparse.Namespace) -> SourceMixer | None:
     sources: list[SyntheticFaceSource] = []
     if args.digiface_root is not None:
-        sources.append(DigiFaceSource(args.digiface_root))
+        sources.append(DigiFaceSource(
+            args.digiface_root,
+            max_samples=args.max_digiface,
+        ))
     if args.facesynthetics_root is not None:
-        sources.append(FaceSyntheticsSource(args.facesynthetics_root))
+        sources.append(FaceSyntheticsSource(
+            args.facesynthetics_root,
+            max_samples=args.max_facesynthetics,
+        ))
     if args.synthetic_eyes_root is not None:
         sources.append(BlenderEyeSource(args.synthetic_eyes_root))
     if not sources:
@@ -77,6 +83,19 @@ def main(argv: list[str] | None = None) -> None:
         type=str,
         default="digiface:0.45,blender_eye:0.35,facesynthetics:0.20",
         help="Comma-separated name:weight pairs.",
+    )
+    parser.add_argument(
+        "--max-digiface",
+        type=int,
+        default=None,
+        help="Cap on DigiFace samples to load. Useful when the full 1M is too many "
+             "for the one-time landmark-cache pre-pass.",
+    )
+    parser.add_argument(
+        "--max-facesynthetics",
+        type=int,
+        default=None,
+        help="Cap on FaceSynthetics samples to load.",
     )
     args = parser.parse_args(argv)
 
