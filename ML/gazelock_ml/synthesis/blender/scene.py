@@ -47,12 +47,17 @@ def setup_scene(render_w: int = 256, render_h: int = 256, samples: int = 64) -> 
     scene.render.film_transparent = False
     if "RenderCam" not in bpy.data.objects:
         cam_data = bpy.data.cameras.new(name="RenderCam")
+        # Eye is tiny (12mm radius) and camera sits 50mm away. Default
+        # clip_start is 0.1 m — that would clip the entire eye. Drop to
+        # 1 cm so the eye is inside the viewable frustum.
+        cam_data.clip_start = 0.005
+        cam_data.clip_end = 10.0
         cam_obj = bpy.data.objects.new("RenderCam", cam_data)
         bpy.context.collection.objects.link(cam_obj)
         cam_obj.location = (0.0, 0.0, 0.05)
         # Default Blender camera looks down its local -Z; at (0, 0, +0.05)
         # with rotation (0, 0, 0) it looks toward world origin where the
-        # eye is built. Do NOT rotate — doing so points the camera away.
+        # eye is built.
         cam_obj.rotation_euler = (0.0, 0.0, 0.0)
         scene.camera = cam_obj
     if "Cube" in bpy.data.objects:
@@ -123,13 +128,16 @@ def _make_sclera() -> bpy.types.Object:
 
 
 def _make_iris(iris_colour_hex: str) -> bpy.types.Object:
-    """Coloured iris disc, radius 6mm, inset slightly behind cornea."""
+    """Coloured iris disc, radius 6mm. Sits just outside the sclera's
+    front pole (+Z side, facing camera) so it's visible from the camera
+    at (0, 0, +0.05). Sclera radius 12mm, so iris plane at z=+0.0121
+    places the disc flush above the sclera surface."""
     obj = _new_mesh_obj("Iris")
     bm = bmesh.new()
     bmesh.ops.create_circle(bm, cap_ends=True, segments=64, radius=0.006)
     bm.to_mesh(obj.data)
     bm.free()
-    obj.location = (0.0, 0.0, -0.011)
+    obj.location = (0.0, 0.0, 0.0121)
     mat = _principled_material("IrisMat", _hex_to_rgba(iris_colour_hex), roughness=0.35)
     nodes = mat.node_tree.nodes
     bsdf = nodes.get("Principled BSDF")
@@ -147,13 +155,14 @@ def _make_iris(iris_colour_hex: str) -> bpy.types.Object:
 
 
 def _make_pupil() -> bpy.types.Object:
-    """Black pupil disc, radius 1.5mm, in front of iris."""
+    """Black pupil disc, radius 1.5mm, sits slightly in front of iris on
+    the +Z side so it occludes the iris center from the camera."""
     obj = _new_mesh_obj("Pupil")
     bm = bmesh.new()
     bmesh.ops.create_circle(bm, cap_ends=True, segments=48, radius=0.0015)
     bm.to_mesh(obj.data)
     bm.free()
-    obj.location = (0.0, 0.0, -0.0108)
+    obj.location = (0.0, 0.0, 0.0122)
     mat = _principled_material("PupilMat", (0.0, 0.0, 0.0, 1.0), roughness=1.0)
     obj.data.materials.append(mat)
     return obj
