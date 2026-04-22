@@ -56,5 +56,7 @@ __pycache__/
 .claude/
 .playwright-mcp/
 
-# NOTE: ML weights (.mlpackage) are tracked via Git LFS starting in
-# Phase 2 — intentionally NOT in this .gitignore. weights/ is committed.
+# ML weights: debug/smoke artefacts are ephemeral — not committed.
+# Release .mlpackage goes to Git LFS in Phase 4.
+weights/debug/
+weights/*.mlpackage
