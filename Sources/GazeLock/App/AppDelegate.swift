@@ -22,6 +22,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var previewBefore: NSImage?
     private var previewAfter: NSImage?
 
+    // Calibration wizard (P3c.8)
+    private var calibrationCapture: CalibrationCapture?
+    private var calibrationHost: NSHostingController<CalibrationWizard>?
+    private var calibrationDetector: LandmarkDetector?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupPipeline()
         setupControlPlane()
@@ -112,6 +117,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // the pipeline off-main using the captured reference.
             Task { @MainActor [weak self] in
                 guard let self else { return }
+                // Feed calibration if active
+                if let capture = self.calibrationCapture, capture.isRecording,
+                   let detector = self.calibrationDetector,
+                   let landmarks = try? detector.detect(in: pb, timestamp: ts) {
+                    capture.feed(headPose: landmarks.headPoseRadians)
+                }
                 let intensity = self.controlStore.state.intensity
                 let vAim = self.controlStore.state.verticalAimDeg
                 let hAim = self.controlStore.state.horizontalAimDeg
@@ -221,7 +232,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func launchCalibration() {
-        presentInfo("Calibration wizard arrives in P3c.8.")
+        let capture = CalibrationCapture()
+        calibrationCapture = capture
+        calibrationDetector = LandmarkDetector()
+
+        let secondaryNames = NSScreen.screens.dropFirst().enumerated().map { index, screen in
+            let name = screen.localizedName
+            return name.isEmpty ? "Screen \(index + 2)" : name
+        }
+
+        let wizard = CalibrationWizard(
+            capture: capture,
+            secondaryScreenNames: secondaryNames,
+            baseProfileId: controlStore.state.setupProfileId,
+            onSave: { [weak self] cal in
+                self?.calibrationStore.save(cal)
+                self?.dismissCalibration()
+            },
+            onCancel: { [weak self] in
+                self?.dismissCalibration()
+            }
+        )
+        let host = NSHostingController(rootView: wizard)
+        calibrationHost = host
+
+        guard let mainWindow else {
+            presentInfo("Open the main window before calibrating.")
+            dismissCalibration()
+            return
+        }
+        mainWindow.contentViewController?.presentAsSheet(host)
+    }
+
+    private func dismissCalibration() {
+        if let host = calibrationHost, let parent = host.parent {
+            parent.dismiss(host)
+        }
+        calibrationHost = nil
+        calibrationCapture = nil
+        calibrationDetector = nil
     }
 
     private func runAutoDetect() {
