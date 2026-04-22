@@ -51,7 +51,7 @@ jobs:
 
       - name: Sync deps + install package
         run: |
-          uv venv --python 3.12
+          [[ -d .venv ]] || uv venv --python 3.12
           uv sync --extra dev --no-install-project
           uv pip install -e .
 
