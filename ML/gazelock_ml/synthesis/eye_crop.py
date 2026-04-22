@@ -52,10 +52,10 @@ def _eye_bbox(
         bbox_h = bbox_w / target_ratio
     cx = (x_min + x_max) / 2
     cy = (y_min + y_max) / 2
-    x0 = int(round(cx - bbox_w / 2))
-    y0 = int(round(cy - bbox_h / 2))
-    x1 = int(round(cx + bbox_w / 2))
-    y1 = int(round(cy + bbox_h / 2))
+    x0 = round(cx - bbox_w / 2)
+    y0 = round(cy - bbox_h / 2)
+    x1 = round(cx + bbox_w / 2)
+    y1 = round(cy + bbox_h / 2)
     return x0, y0, x1, y1
 
 

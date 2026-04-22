@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from gazelock_ml.synthesis.blender.gaze_sweep import GazeTarget, random_gaze_targets
+from gazelock_ml.synthesis.blender.gaze_sweep import random_gaze_targets
 
 
 def test_random_gaze_targets_count() -> None:

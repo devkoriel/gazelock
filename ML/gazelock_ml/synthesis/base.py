@@ -58,4 +58,4 @@ def _validate_patch(patch: np.ndarray) -> None:
         raise ValueError(f"Expected dtype uint8; got {patch.dtype}")
 
 
-__all__ = ["SyntheticFaceSource", "SourceInfo", "_validate_patch"]
+__all__ = ["SourceInfo", "SyntheticFaceSource", "_validate_patch"]

@@ -85,10 +85,7 @@ class ManifestTail:
             pct = count / max(self.total, 1)
 
             recent = self._entries[-200:]
-            if recent:
-                avg = sum(e.get("render_seconds", 0) for e in recent) / len(recent)
-            else:
-                avg = 0.0
+            avg = sum(e.get("render_seconds", 0) for e in recent) / len(recent) if recent else 0.0
 
             remaining_frames = max(0, self.total - count)
             eta_s = remaining_frames * avg

@@ -72,7 +72,7 @@ def _hex_to_rgba(hex_rgb: str) -> tuple[float, float, float, float]:
     return (r, g, b, 1.0)
 
 
-def _new_mesh_obj(name: str) -> "bpy.types.Object":
+def _new_mesh_obj(name: str) -> bpy.types.Object:
     mesh = bpy.data.meshes.new(name)
     obj = bpy.data.objects.new(name, mesh)
     bpy.context.collection.objects.link(obj)
@@ -81,7 +81,7 @@ def _new_mesh_obj(name: str) -> "bpy.types.Object":
 
 def _principled_material(
     name: str, base_color: tuple[float, float, float, float], roughness: float = 0.5
-) -> "bpy.types.Material":
+) -> bpy.types.Material:
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
     nodes = mat.node_tree.nodes
@@ -94,7 +94,7 @@ def _principled_material(
     return mat
 
 
-def _make_sclera() -> "bpy.types.Object":
+def _make_sclera() -> bpy.types.Object:
     """White of the eye: UV sphere radius 12mm, soft off-white with faint pink tint."""
     obj = _new_mesh_obj("Sclera")
     bm = bmesh.new()
@@ -119,7 +119,7 @@ def _make_sclera() -> "bpy.types.Object":
     return obj
 
 
-def _make_iris(iris_colour_hex: str) -> "bpy.types.Object":
+def _make_iris(iris_colour_hex: str) -> bpy.types.Object:
     """Coloured iris disc, radius 6mm, inset slightly behind cornea."""
     obj = _new_mesh_obj("Iris")
     bm = bmesh.new()
@@ -143,7 +143,7 @@ def _make_iris(iris_colour_hex: str) -> "bpy.types.Object":
     return obj
 
 
-def _make_pupil() -> "bpy.types.Object":
+def _make_pupil() -> bpy.types.Object:
     """Black pupil disc, radius 1.5mm, in front of iris."""
     obj = _new_mesh_obj("Pupil")
     bm = bmesh.new()
@@ -156,7 +156,7 @@ def _make_pupil() -> "bpy.types.Object":
     return obj
 
 
-def _make_cornea() -> "bpy.types.Object":
+def _make_cornea() -> bpy.types.Object:
     """Transparent front cap: UV sphere trimmed to front 30%, glass BSDF."""
     obj = _new_mesh_obj("Cornea")
     bm = bmesh.new()
@@ -181,7 +181,7 @@ def _make_cornea() -> "bpy.types.Object":
     return obj
 
 
-def make_procedural_eye(iris_colour_hex: str) -> "bpy.types.Object":
+def make_procedural_eye(iris_colour_hex: str) -> bpy.types.Object:
     """Build a complete procedural eye; returns the sclera (root) object."""
     _require_bpy()
     sclera = _make_sclera()
@@ -193,7 +193,7 @@ def make_procedural_eye(iris_colour_hex: str) -> "bpy.types.Object":
     return sclera
 
 
-def load_eye_asset(asset_path: Path) -> "bpy.types.Object":
+def load_eye_asset(asset_path: Path) -> bpy.types.Object:
     """Load external 3D eye model (CC0). Currently unused — retained
     for when CC0 eye assets become available."""
     _require_bpy()
@@ -202,7 +202,7 @@ def load_eye_asset(asset_path: Path) -> "bpy.types.Object":
         bpy.ops.import_scene.gltf(filepath=str(asset_path))
     elif suffix == ".blend":
         with bpy.data.libraries.load(str(asset_path), link=False) as (src, dst):
-            dst.objects = [n for n in src.objects]
+            dst.objects = list(src.objects)
         for obj in dst.objects:
             if obj is not None:
                 bpy.context.scene.collection.objects.link(obj)
@@ -214,7 +214,7 @@ def load_eye_asset(asset_path: Path) -> "bpy.types.Object":
     return meshes[-1]
 
 
-def apply_gaze(obj: "bpy.types.Object", gaze_vec: tuple[float, float, float]) -> None:
+def apply_gaze(obj: bpy.types.Object, gaze_vec: tuple[float, float, float]) -> None:
     _require_bpy()
     vec = mathutils.Vector(gaze_vec).normalized()
     matrix = vec.to_track_quat("-Z", "Y").to_matrix().to_4x4()
@@ -251,11 +251,11 @@ def render_frame(output_path: Path) -> None:
 
 
 __all__ = [
-    "setup_scene",
-    "clear_scene",
-    "make_procedural_eye",
-    "load_eye_asset",
     "apply_gaze",
     "apply_lighting",
+    "clear_scene",
+    "load_eye_asset",
+    "make_procedural_eye",
     "render_frame",
+    "setup_scene",
 ]

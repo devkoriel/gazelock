@@ -28,7 +28,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(PROJECT_ROOT / "ML"))
 
-from gazelock_ml.synthesis.blender import gaze_sweep, lighting, scene
+from gazelock_ml.synthesis.blender import gaze_sweep, lighting, scene  # noqa: E402
 
 IRIS_COLOUR_POOL = [
     "#4a2e1a",  # dark brown
