@@ -37,6 +37,7 @@ targets:
     platform: macOS
     sources:
       - path: Sources/GazeLock
+      - path: Sources/Shared
     resources:
       - path: Sources/GazeLock/Resources
     info:
@@ -47,6 +48,8 @@ targets:
         LSUIElement: true
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        MachServices:
+          com.gazelock.GazeLock.ControlService: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.gazelock.GazeLock
@@ -65,6 +68,8 @@ targets:
     platform: macOS
     sources:
       - path: Extension
+      - path: Sources/GazeLock/Pipeline
+      - path: Sources/Shared
     info:
       path: Extension/Info.plist
       properties:

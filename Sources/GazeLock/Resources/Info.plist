@@ -20,6 +20,11 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>MachServices</key>
+	<dict>
+		<key>com.gazelock.GazeLock.ControlService</key>
+		<true/>
+	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>GazeLock needs camera access to apply real-time gaze correction.</string>
 	<key>NSSystemExtensionUsageDescription</key>
