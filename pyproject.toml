@@ -18,6 +18,11 @@ dependencies = [
     "scipy>=1.11,<2.0",
 ]
 
+[project.scripts]
+gazelock-train = "gazelock_ml.cli.train:main"
+gazelock-eval = "gazelock_ml.cli.eval:main"
+gazelock-export = "gazelock_ml.cli.export:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0,<9.0",
