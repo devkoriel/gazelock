@@ -6,7 +6,14 @@ import Foundation
 /// that can outrun a low-pass smoother; Kalman predicts through
 /// those transients and re-locks once motion settles.
 public final class IrisKalman {
-    private var state: (x: Double, y: Double, vx: Double, vy: Double)?
+    private struct State {
+        var x: Double
+        var y: Double
+        var vx: Double
+        var vy: Double
+    }
+
+    private var state: State?
     private var covariance: [[Double]]  // 4x4
     private var lastTime: TimeInterval?
 
@@ -25,7 +32,7 @@ public final class IrisKalman {
 
     public func update(measurement: Vec2, timestamp: TimeInterval) -> Vec2 {
         guard let prev = state, let prevTime = lastTime else {
-            state = (measurement.x, measurement.y, 0, 0)
+            state = State(x: measurement.x, y: measurement.y, vx: 0, vy: 0)
             lastTime = timestamp
             return measurement
         }
@@ -34,7 +41,7 @@ public final class IrisKalman {
         // --- Predict step ---
         let px = prev.x + prev.vx * dt
         let py = prev.y + prev.vy * dt
-        let predicted = (x: px, y: py, vx: prev.vx, vy: prev.vy)
+        let predicted = State(x: px, y: py, vx: prev.vx, vy: prev.vy)
 
         // Predicted covariance (constant-velocity dynamics + process noise)
         var p = covariance
@@ -65,7 +72,7 @@ public final class IrisKalman {
         let newVx = predicted.vx + kvx0 * innovX
         let newVy = predicted.vy + kvy1 * innovY
 
-        state = (newX, newY, newVx, newVy)
+        state = State(x: newX, y: newY, vx: newVx, vy: newVy)
         lastTime = timestamp
 
         // Covariance update (simplified for diagonal H)
