@@ -87,17 +87,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         cameraCapture.onFrame = { pb, ts in
             // Render BEFORE off-main (pure CoreImage → NSImage; safe).
             let before = PreviewFrameRenderer.nsImage(from: pb)
-            // Hop to main only to read the latest intensity, then run
+            // Hop to main only to read the latest state, then run
             // the pipeline off-main using the captured reference.
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 let intensity = self.controlStore.state.intensity
+                let vAim = self.controlStore.state.verticalAimDeg
+                let hAim = self.controlStore.state.horizontalAimDeg
+                let sens = self.controlStore.state.sensitivity
                 // Run pipeline work without blocking the main actor.
                 let after: NSImage? = await Self.processOffMain(
                     pipeline: pipelineRef,
                     pixelBuffer: pb,
                     timestamp: ts,
-                    intensity: intensity
+                    intensity: intensity,
+                    verticalAimDeg: vAim,
+                    horizontalAimDeg: hAim,
+                    sensitivity: sens
                 )
                 self.previewBefore = before
                 self.previewAfter = after
@@ -117,12 +123,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         pipeline: FramePipeline,
         pixelBuffer: CVPixelBuffer,
         timestamp: TimeInterval,
-        intensity: Double
+        intensity: Double,
+        verticalAimDeg: Double,
+        horizontalAimDeg: Double,
+        sensitivity: Sensitivity
     ) async -> NSImage? {
         let out: CVPixelBuffer = (try? pipeline.process(
             pixelBuffer: pixelBuffer,
             timestamp: timestamp,
-            intensity: intensity
+            intensity: intensity,
+            verticalAimDeg: verticalAimDeg,
+            horizontalAimDeg: horizontalAimDeg,
+            sensitivity: sensitivity
         )) ?? pixelBuffer
         return PreviewFrameRenderer.nsImage(from: out)
     }

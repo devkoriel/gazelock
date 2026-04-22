@@ -138,7 +138,10 @@ final class CameraExtensionStream: NSObject, CMIOExtensionStreamSource, @uncheck
             output = try pipeline.process(
                 pixelBuffer: pixelBuffer,
                 timestamp: timestamp,
-                intensity: state.intensity
+                intensity: state.intensity,
+                verticalAimDeg: state.verticalAimDeg,
+                horizontalAimDeg: state.horizontalAimDeg,
+                sensitivity: state.sensitivity
             )
         } catch {
             Self.logger.error(

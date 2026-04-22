@@ -18,6 +18,7 @@ public final class FramePipeline {
     private let detector: LandmarkDetector
     private let warp: MetalWarpPipeline
     private let refiner: CoreMLRefiner?
+    private let lookAway: LookAwayDetector
     private let eyeROISize = (w: 96, h: 72)
 
     public init(bundle: Bundle = .main) throws {
@@ -28,23 +29,44 @@ public final class FramePipeline {
             throw Error.metalInitFailed
         }
         self.refiner = try? CoreMLRefiner(bundle: bundle)
+        self.lookAway = LookAwayDetector(sensitivity: .normal)
     }
 
-    /// Process a single frame. `intensity` scales the target-gaze
-    /// displacement pre-warp; 0 = passthrough, 1 = full correction.
+    /// Process a single frame. `intensity` is the user's base slider value;
+    /// the LookAwayDetector scales it based on head pose. Aim offsets shift
+    /// the correction target within the image plane.
     public func process(
         pixelBuffer: CVPixelBuffer,
         timestamp: TimeInterval,
-        intensity: Double
+        intensity: Double,
+        verticalAimDeg: Double = -2.0,
+        horizontalAimDeg: Double = 0.0,
+        sensitivity: Sensitivity = .normal
     ) throws -> CVPixelBuffer {
         guard let landmarks = try detector.detect(in: pixelBuffer, timestamp: timestamp) else {
             return pixelBuffer  // no face → passthrough
         }
 
+        lookAway.sensitivity = sensitivity
+        let alpha = lookAway.compute(headPose: landmarks.headPoseRadians, timestampSeconds: timestamp)
+        let effectiveIntensity = intensity * alpha
+
+        if effectiveIntensity < 0.01 {
+            return pixelBuffer
+        }
+
         let output = try copyOf(pixelBuffer)
 
         for eye in [landmarks.leftEye, landmarks.rightEye] {
-            try warpEye(eye: eye, headPose: landmarks.headPoseRadians, intensity: intensity, source: pixelBuffer, destination: output)
+            try warpEye(
+                eye: eye,
+                headPose: landmarks.headPoseRadians,
+                intensity: effectiveIntensity,
+                verticalAimDeg: verticalAimDeg,
+                horizontalAimDeg: horizontalAimDeg,
+                source: pixelBuffer,
+                destination: output
+            )
         }
 
         return output
@@ -54,11 +76,17 @@ public final class FramePipeline {
         eye: EyeLandmarks,
         headPose: HeadPose,
         intensity: Double,
+        verticalAimDeg: Double,
+        horizontalAimDeg: Double,
         source: CVPixelBuffer,
         destination: CVPixelBuffer
     ) throws {
-        // Compute target iris, apply intensity
-        let targetIris = EyeGeometry.targetIrisPx(eye: eye, headPose: headPose)
+        let targetIris = EyeGeometry.targetIrisPx(
+            eye: eye,
+            headPose: headPose,
+            verticalAimDeg: verticalAimDeg,
+            horizontalAimDeg: horizontalAimDeg
+        )
         let displacement = Vec2(
             (targetIris.x - eye.pupilCenter.x) * intensity,
             (targetIris.y - eye.pupilCenter.y) * intensity
