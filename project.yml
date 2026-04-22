@@ -1,0 +1,117 @@
+name: GazeLock
+
+options:
+  bundleIdPrefix: com.gazelock
+  deploymentTarget:
+    macOS: "15.0"
+  xcodeVersion: "16.0"
+  generateEmptyDirectories: true
+  groupSortPosition: top
+  createIntermediateGroups: true
+
+settings:
+  base:
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.9"
+    MACOSX_DEPLOYMENT_TARGET: "15.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    ENABLE_USER_SCRIPT_SANDBOXING: true
+    DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_HARDENED_RUNTIME: true
+
+configs:
+  Debug:
+    SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+    ENABLE_TESTABILITY: true
+    SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+  Release:
+    SWIFT_OPTIMIZATION_LEVEL: "-O"
+    ENABLE_TESTABILITY: false
+    SWIFT_ACTIVE_COMPILATION_CONDITIONS: RELEASE
+
+targets:
+  GazeLock:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/GazeLock
+    resources:
+      - path: Sources/GazeLock/Resources
+    info:
+      path: Sources/GazeLock/Resources/Info.plist
+      properties:
+        NSCameraUsageDescription: "GazeLock needs camera access to apply real-time gaze correction."
+        NSSystemExtensionUsageDescription: "GazeLock installs a virtual camera extension so video apps can use the corrected feed."
+        LSUIElement: true
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.gazelock.GazeLock
+        PRODUCT_NAME: GazeLock
+        CODE_SIGN_ENTITLEMENTS: Sources/GazeLock/GazeLock.entitlements
+        INFOPLIST_FILE: Sources/GazeLock/Resources/Info.plist
+        LD_RUNPATH_SEARCH_PATHS:
+          - "@executable_path/../Frameworks"
+    dependencies:
+      - target: GazeLockCameraExtension
+        embed: true
+        codeSign: true
+
+  GazeLockCameraExtension:
+    type: system-extension
+    platform: macOS
+    sources:
+      - path: Extension
+    info:
+      path: Extension/Info.plist
+      properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.cmio.CMIOExtensionProvider
+          NSExtensionPrincipalClass: "$(PRODUCT_MODULE_NAME).CameraExtensionProvider"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.gazelock.GazeLock.CameraExtension
+        PRODUCT_NAME: GazeLockCameraExtension
+        CODE_SIGN_ENTITLEMENTS: Extension/GazeLockCameraExtension.entitlements
+        INFOPLIST_FILE: Extension/Info.plist
+        SYSTEM_EXTENSION_INSTALL_PATH: "$(SYSTEM_EXTENSIONS_FOLDER_PATH)"
+        SKIP_INSTALL: true
+
+  GazeLockTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/GazeLockTests
+    dependencies:
+      - target: GazeLock
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.gazelock.GazeLockTests
+        PRODUCT_NAME: GazeLockTests
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/GazeLock.app/Contents/MacOS/GazeLock"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        GENERATE_INFOPLIST_FILE: true
+
+schemes:
+  GazeLock:
+    build:
+      targets:
+        GazeLock: all
+        GazeLockCameraExtension: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - GazeLockTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
