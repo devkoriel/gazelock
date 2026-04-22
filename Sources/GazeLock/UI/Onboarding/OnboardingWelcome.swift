@@ -12,7 +12,10 @@ public struct OnboardingWelcome: View {
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(PopoverStyle.textPrimary)
                 .multilineTextAlignment(.center)
-            Text("GazeLock corrects the mislocation between your camera and what you're looking at on screen — so the person you're talking to feels naturally engaged.")
+            Text(
+                "GazeLock corrects the mislocation between your camera and what you're looking "
+                + "at on screen — so the person you're talking to feels naturally engaged."
+            )
                 .font(.system(size: 12))
                 .foregroundStyle(PopoverStyle.textSecondary)
                 .multilineTextAlignment(.center)
