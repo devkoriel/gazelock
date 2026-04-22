@@ -3,6 +3,13 @@
 GazeLock's Phase 2c training data pipeline uses these third-party
 datasets and assets. All are MIT or CC0 (commercial-safe).
 
+## Runtime Libraries
+
+### face-alignment
+- Source: https://github.com/1adrianb/face-alignment
+- License: BSD-3-Clause
+- Used for: Computing 68-point iBUG landmarks from DigiFace-1M images at load time (cached to .landmarks_cache.jsonl)
+
 ## Datasets (fetched by user, not committed)
 
 ### Microsoft DigiFace-1M
