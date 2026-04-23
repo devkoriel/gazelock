@@ -6,7 +6,5 @@
     <true/>
     <key>com.apple.security.device.camera</key>
     <true/>
-    <key>com.apple.developer.system-extension.install</key>
-    <true/>
 </dict>
 </plist>
