@@ -153,11 +153,57 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self.previewAfter = after
             }
         }
+        // Gate start on camera authorization. If .notDetermined, trigger the
+        // system prompt first. If .denied/.restricted, surface an error linking
+        // to System Settings (onboarding's camera step can be bypassed if the
+        // `hasCompletedOnboarding` flag was set without the user actually
+        // granting permission).
+        let status = AVCaptureDevice.authorizationStatus(for: .video)
+        switch status {
+        case .authorized:
+            beginCapture()
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    if granted {
+                        self.beginCapture()
+                    } else {
+                        self.menuBarController.setState(.error)
+                        self.presentCameraDeniedAlert()
+                    }
+                }
+            }
+        case .denied, .restricted:
+            menuBarController.setState(.error)
+            presentCameraDeniedAlert()
+        @unknown default:
+            menuBarController.setState(.error)
+            presentCameraDeniedAlert()
+        }
+    }
+
+    private func beginCapture() {
         do {
             try cameraCapture.start()
         } catch {
             menuBarController.setState(.error)
             presentFatal("Could not start camera: \(error)")
+        }
+    }
+
+    private func presentCameraDeniedAlert() {
+        let alert = NSAlert()
+        alert.messageText = "Camera access required"
+        alert.informativeText = "GazeLock needs camera access to correct your eye gaze. "
+            + "Open System Settings > Privacy & Security > Camera and enable GazeLock."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Open System Settings")
+        alert.addButton(withTitle: "Later")
+        if alert.runModal() == .alertFirstButtonReturn {
+            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera") {
+                NSWorkspace.shared.open(url)
+            }
         }
     }
 

@@ -17,15 +17,14 @@ public final class CameraCapture: NSObject {
     private let session = AVCaptureSession()
     private let videoOutput = AVCaptureVideoDataOutput()
     private let sampleQueue = DispatchQueue(label: "com.gazelock.GazeLock.CameraCapture.samples")
+    private let sessionQueue = DispatchQueue(label: "com.gazelock.GazeLock.CameraCapture.session")
 
     /// Delivered on `sampleQueue`. Caller must not block.
     public var onFrame: ((CVPixelBuffer, TimeInterval) -> Void)?
 
     public func start(deviceUniqueID: String? = nil) throws {
-        session.beginConfiguration()
-        defer { session.commitConfiguration() }
-
-        // Pick device
+        // Pick device BEFORE the configuration block so we can throw Swift
+        // errors out cleanly before touching the session's lock.
         let device: AVCaptureDevice?
         if let uid = deviceUniqueID {
             device = AVCaptureDevice(uniqueID: uid)
@@ -42,29 +41,51 @@ public final class CameraCapture: NSObject {
         }
         guard let dev = device else { throw CaptureError.noDevices }
 
-        // Remove existing inputs/outputs (idempotent start)
-        for input in session.inputs { session.removeInput(input) }
-        for output in session.outputs { session.removeOutput(output) }
-
         let input = try AVCaptureDeviceInput(device: dev)
-        guard session.canAddInput(input) else { throw CaptureError.cannotAddInput }
+
+        // Configure the session. CRITICAL: we MUST call commitConfiguration
+        // before startRunning, otherwise AVCaptureSession throws an ObjC
+        // exception that Swift can't catch (process crash).
+        session.beginConfiguration()
+
+        // Remove existing inputs/outputs (idempotent start)
+        for existing in session.inputs { session.removeInput(existing) }
+        for existing in session.outputs { session.removeOutput(existing) }
+
+        guard session.canAddInput(input) else {
+            session.commitConfiguration()
+            throw CaptureError.cannotAddInput
+        }
         session.addInput(input)
 
         videoOutput.videoSettings = [
-            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
         ]
         videoOutput.setSampleBufferDelegate(self, queue: sampleQueue)
         videoOutput.alwaysDiscardsLateVideoFrames = true
-        guard session.canAddOutput(videoOutput) else { throw CaptureError.cannotAddOutput }
+        guard session.canAddOutput(videoOutput) else {
+            session.commitConfiguration()
+            throw CaptureError.cannotAddOutput
+        }
         session.addOutput(videoOutput)
 
-        session.sessionPreset = .hd1280x720
+        if session.canSetSessionPreset(.hd1280x720) {
+            session.sessionPreset = .hd1280x720
+        }
 
-        session.startRunning()
+        session.commitConfiguration()
+
+        // startRunning is synchronous and blocks until the session starts.
+        // Apple's docs say it MUST be called off the main queue.
+        sessionQueue.async { [session] in
+            session.startRunning()
+        }
     }
 
     public func stop() {
-        session.stopRunning()
+        sessionQueue.async { [session] in
+            session.stopRunning()
+        }
     }
 
     public func isRunning() -> Bool {
