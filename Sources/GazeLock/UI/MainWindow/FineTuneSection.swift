@@ -20,11 +20,11 @@ public struct FineTuneSection: View {
                 field("Vertical aim", Binding(
                     get: { store.state.verticalAimDeg },
                     set: { store.setVerticalAimDeg($0) }
-                ), in: -10...10, format: "%+.1f°")
+                ), in: -30...30, format: "%+.1f°")
                 field("Horizontal aim", Binding(
                     get: { store.state.horizontalAimDeg },
                     set: { store.setHorizontalAimDeg($0) }
-                ), in: -10...10, format: "%+.1f°")
+                ), in: -30...30, format: "%+.1f°")
 
                 MainWindowStyle.sectionTitle("Disengagement")
                 HStack {

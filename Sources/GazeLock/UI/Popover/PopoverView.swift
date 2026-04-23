@@ -152,7 +152,7 @@ public struct PopoverView: View {
             Slider(value: Binding(
                 get: { store.state.verticalAimDeg },
                 set: { store.setVerticalAimDeg($0) }
-            ), in: -10...10, step: 0.5)
+            ), in: -30...30, step: 0.5)
                 .tint(PopoverStyle.accent)
         }
     }

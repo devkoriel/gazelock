@@ -54,14 +54,14 @@ public final class ControlStateStore {
 
     public func setVerticalAimDeg(_ deg: Double) {
         var new = state
-        new.verticalAimDeg = min(max(deg, -10.0), 10.0)
+        new.verticalAimDeg = min(max(deg, -30.0), 30.0)
         state = new
         onPushNeeded(new)
     }
 
     public func setHorizontalAimDeg(_ deg: Double) {
         var new = state
-        new.horizontalAimDeg = min(max(deg, -10.0), 10.0)
+        new.horizontalAimDeg = min(max(deg, -30.0), 30.0)
         state = new
         onPushNeeded(new)
     }

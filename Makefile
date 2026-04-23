@@ -1,4 +1,4 @@
-.PHONY: all generate build build-release test test-unit lint lint-fix clean run verify setup help
+.PHONY: all generate build build-dev build-release test test-unit lint lint-fix clean run verify setup help
 
 PROJECT_NAME = GazeLock
 SCHEME = GazeLock
@@ -9,9 +9,13 @@ DERIVED_DATA = $(BUILD_DIR)/DerivedData
 
 XCODEBUILD = xcodebuild
 XCODEBUILD_FLAGS = -project $(PROJECT_NAME).xcodeproj -scheme $(SCHEME) -derivedDataPath $(DERIVED_DATA)
-# Ad-hoc signing avoids the provisioning-profile requirement for the system
-# extension entitlement in local/CI builds without a developer account.
+# CI bypass: no signing, for fast test iterations. System extensions
+# will NOT install with this — use `make build-dev` for local runs.
 CODESIGN_FLAGS = CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO ENABLE_HARDENED_RUNTIME=NO
+# Dev-local signing: ad-hoc identity + entitlements attached + hardened
+# runtime on. Required for system-extension installs in combination with
+# `sudo systemextensionsctl developer on`.
+DEVSIGN_FLAGS = CODE_SIGN_IDENTITY="-" CODE_SIGN_STYLE=Manual CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES ENABLE_HARDENED_RUNTIME=YES
 XCPRETTY ?= xcpretty
 
 all: generate build
@@ -22,8 +26,28 @@ generate:
 	@echo "    Done: $(PROJECT_NAME).xcodeproj"
 
 build: generate
-	@echo "==> Building $(PROJECT_NAME) (Debug)"
+	@echo "==> Building $(PROJECT_NAME) (Debug, no-sign — fast iteration; system extension won't install)"
 	$(XCODEBUILD) $(XCODEBUILD_FLAGS) -configuration $(CONFIG_DEBUG) $(CODESIGN_FLAGS) build
+
+build-dev: generate
+	@test -n "$(DEVELOPMENT_TEAM)" || ( \
+		echo "" ; \
+		echo "  ERROR: DEVELOPMENT_TEAM environment variable is not set." ; \
+		echo "" ; \
+		echo "  System extensions require the com.apple.developer.system-extension.install" ; \
+		echo "  entitlement, which macOS only honours when the binary is signed with a real" ; \
+		echo "  Apple Developer Team. Ad-hoc signing is not sufficient." ; \
+		echo "" ; \
+		echo "  Export your Team ID, then retry:" ; \
+		echo "      export DEVELOPMENT_TEAM=<your-team-id>   # e.g. 45BHMK6XA9" ; \
+		echo "      make build-dev" ; \
+		echo "" ; \
+		exit 1 )
+	@echo "==> Building $(PROJECT_NAME) (Debug, team-signed as $(DEVELOPMENT_TEAM))"
+	@echo "    If the system extension is new, also run ONCE:"
+	@echo "        sudo systemextensionsctl developer on"
+	$(XCODEBUILD) $(XCODEBUILD_FLAGS) -configuration $(CONFIG_DEBUG) \
+		DEVELOPMENT_TEAM=$(DEVELOPMENT_TEAM) CODE_SIGN_STYLE=Automatic build
 
 build-release: generate
 	@echo "==> Building $(PROJECT_NAME) (Release)"
@@ -52,7 +76,7 @@ clean:
 	@rm -rf $(PROJECT_NAME).xcodeproj
 	$(XCODEBUILD) $(XCODEBUILD_FLAGS) clean 2>/dev/null || true
 
-run: build
+run: build-dev
 	@echo "==> Launching $(PROJECT_NAME)"
 	@open "$(DERIVED_DATA)/Build/Products/$(CONFIG_DEBUG)/$(PROJECT_NAME).app"
 
