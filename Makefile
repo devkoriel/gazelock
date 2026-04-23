@@ -77,8 +77,13 @@ clean:
 	$(XCODEBUILD) $(XCODEBUILD_FLAGS) clean 2>/dev/null || true
 
 run: build-dev
-	@echo "==> Launching $(PROJECT_NAME)"
-	@open "$(DERIVED_DATA)/Build/Products/$(CONFIG_DEBUG)/$(PROJECT_NAME).app"
+	@echo "==> Copying to /Applications/$(PROJECT_NAME).app"
+	@echo "    (macOS requires system-extension-hosting apps to live in /Applications)"
+	@osascript -e 'quit app "$(PROJECT_NAME)"' 2>/dev/null ; killall $(PROJECT_NAME) 2>/dev/null ; true
+	@rm -rf /Applications/$(PROJECT_NAME).app
+	@cp -R "$(DERIVED_DATA)/Build/Products/$(CONFIG_DEBUG)/$(PROJECT_NAME).app" /Applications/
+	@echo "==> Launching from /Applications"
+	@open /Applications/$(PROJECT_NAME).app
 
 verify: lint test
 	@echo "==> verify: lint + test passed"
