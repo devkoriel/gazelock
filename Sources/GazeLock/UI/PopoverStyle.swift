@@ -4,9 +4,9 @@ import SwiftUI
 public enum PopoverStyle {
     // Colors
     public static let backgroundPrimary = Color(red: 0, green: 0, blue: 0)              // #000000
-    public static let backgroundElevated = Color(red: 0x1C/255.0, green: 0x1C/255.0, blue: 0x1E/255.0)
-    public static let border = Color(red: 0x2A/255.0, green: 0x2A/255.0, blue: 0x2D/255.0)
-    public static let accent = Color(red: 0, green: 0xFF/255.0, blue: 0x88/255.0)       // #00FF88
+    public static let backgroundElevated = Color(red: 0x1C / 255.0, green: 0x1C / 255.0, blue: 0x1E / 255.0)
+    public static let border = Color(red: 0x2A / 255.0, green: 0x2A / 255.0, blue: 0x2D / 255.0)
+    public static let accent = Color(red: 0, green: 0xFF / 255.0, blue: 0x88 / 255.0)       // #00FF88
 
     public static let textPrimary = Color.white.opacity(0.95)
     public static let textSecondary = Color.white.opacity(0.65)

@@ -12,7 +12,7 @@ final class EyeGeometryAimTests: XCTestCase {
                 Vec2(pupilX + 18, pupilY - 8),
                 Vec2(pupilX + 18, pupilY + 8),
                 Vec2(pupilX + 12, pupilY + 12),
-                Vec2(pupilX, pupilY + 14),
+                Vec2(pupilX, pupilY + 14)
             ],
             pupilCenter: Vec2(pupilX, pupilY),
             irisRadiusPx: irisPx

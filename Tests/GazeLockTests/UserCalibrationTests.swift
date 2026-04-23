@@ -9,7 +9,7 @@ final class UserCalibrationTests: XCTestCase {
             primaryScreenCentroid: .init(yawRad: 0, pitchRad: 0.05, rollRad: 0),
             secondaryScreenCentroids: [
                 .init(yawRad: -0.5, pitchRad: 0.02, rollRad: 0),
-                .init(yawRad: 0.5, pitchRad: 0.02, rollRad: 0),
+                .init(yawRad: 0.5, pitchRad: 0.02, rollRad: 0)
             ]
         )
         let data = try JSONEncoder().encode(cal)

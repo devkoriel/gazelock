@@ -3,24 +3,21 @@ import AppKit
 
 public struct DashboardSection: View {
     @Bindable var store: ControlStateStore
-    @Binding var beforeImage: NSImage?
-    @Binding var afterImage: NSImage?
+    @Bindable var previewState: PreviewState
 
     public init(
         store: ControlStateStore,
-        beforeImage: Binding<NSImage?>,
-        afterImage: Binding<NSImage?>
+        previewState: PreviewState
     ) {
         self.store = store
-        self._beforeImage = beforeImage
-        self._afterImage = afterImage
+        self.previewState = previewState
     }
 
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: MainWindowStyle.sectionSpacing) {
                 MainWindowStyle.sectionTitle("Live Preview")
-                LivePreview(beforeImage: $beforeImage, afterImage: $afterImage)
+                LivePreview(beforeImage: $previewState.before, afterImage: $previewState.after)
                     .frame(height: 200)
 
                 MainWindowStyle.sectionTitle("Correction Status")

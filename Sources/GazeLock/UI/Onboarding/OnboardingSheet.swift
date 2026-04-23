@@ -6,10 +6,19 @@ public enum OnboardingStep: Int, CaseIterable {
     case welcome, installExtension, cameraPermission, pickSetup, done
 }
 
+public enum ExtensionInstallState: Equatable {
+    case idle
+    case submitted
+    case waitingForUserApproval
+    case activated
+    case failed(String)
+}
+
 @MainActor
 public final class OnboardingCoordinator: ObservableObject {
     @Published public var step: OnboardingStep = .welcome
     @Published public var extensionActivated: Bool = false
+    @Published public var extInstallState: ExtensionInstallState = .idle
     @Published public var cameraAuthorized: Bool = false
     @Published public var pickedProfileId: String = BuiltinProfiles.externalTop.id
 

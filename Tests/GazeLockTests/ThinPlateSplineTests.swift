@@ -15,7 +15,7 @@ final class ThinPlateSplineTests: XCTestCase {
 
     func testFlowFieldShape() {
         let source = [
-            Vec2(0, 0), Vec2(95, 0), Vec2(0, 71), Vec2(95, 71), Vec2(47.5, 35.5),
+            Vec2(0, 0), Vec2(95, 0), Vec2(0, 71), Vec2(95, 71), Vec2(47.5, 35.5)
         ]
         var target = source
         target[4] = Vec2(50, 35)  // shift center 2.5 px right

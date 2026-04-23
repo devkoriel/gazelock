@@ -41,8 +41,8 @@ public enum EyeGeometry {
         // Row-major, 3x3.
         let rot: [[Double]] = [
             [cy * cr - sy * sp * sr, -cy * sr - sy * sp * cr, -sy * cp],
-            [cp * sr,                 cp * cr,                 -sp],
-            [sy * cr + cy * sp * sr, -sy * sr + cy * sp * cr, cy * cp],
+            [cp * sr, cp * cr, -sp],
+            [sy * cr + cy * sp * sr, -sy * sr + cy * sp * cr, cy * cp]
         ]
 
         // Target gaze = -z in camera frame. In head frame: rot^T @ [0,0,-1].

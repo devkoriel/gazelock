@@ -93,22 +93,40 @@ public final class FramePipeline {
         )
         let effectiveTarget = eye.pupilCenter + displacement
 
-        // Build TPS control points: 4 ROI corners + iris center
-        let roiX = max(0, Int(eye.pupilCenter.x) - eyeROISize.w / 2)
-        let roiY = max(0, Int(eye.pupilCenter.y) - eyeROISize.h / 2)
+        // ROI origin in full-image coordinates. Clamp so the ROI stays
+        // within the frame even for landmarks near an edge.
+        let imgW = CVPixelBufferGetWidth(source)
+        let imgH = CVPixelBufferGetHeight(source)
+        let roiW = eyeROISize.w
+        let roiH = eyeROISize.h
+        let roiX = max(0, min(imgW - roiW, Int(eye.pupilCenter.x) - roiW / 2))
+        let roiY = max(0, min(imgH - roiH, Int(eye.pupilCenter.y) - roiH / 2))
+
+        // Build TPS in ROI-LOCAL coordinates (0..roiW-1, 0..roiH-1) because
+        // FlowField samples at those same local coords. Feeding full-image
+        // coords to the fit would make every flow vector point far out of
+        // bounds, which Metal reads back as white — the "white box" bug.
+        let localPupil = Vec2(
+            eye.pupilCenter.x - Double(roiX),
+            eye.pupilCenter.y - Double(roiY)
+        )
+        let localTarget = Vec2(
+            effectiveTarget.x - Double(roiX),
+            effectiveTarget.y - Double(roiY)
+        )
 
         let source4 = [
-            Vec2(Double(roiX), Double(roiY)),
-            Vec2(Double(roiX + eyeROISize.w - 1), Double(roiY)),
-            Vec2(Double(roiX), Double(roiY + eyeROISize.h - 1)),
-            Vec2(Double(roiX + eyeROISize.w - 1), Double(roiY + eyeROISize.h - 1)),
-            eye.pupilCenter,
+            Vec2(0, 0),
+            Vec2(Double(roiW - 1), 0),
+            Vec2(0, Double(roiH - 1)),
+            Vec2(Double(roiW - 1), Double(roiH - 1)),
+            localPupil,
         ]
         var target5 = source4
-        target5[4] = effectiveTarget
+        target5[4] = localTarget
 
         let tps = ThinPlateSpline.fit(source: target5, target: source4)  // inverse mapping for sampling
-        let flow = FlowField.from(tps: tps, width: eyeROISize.w, height: eyeROISize.h)
+        let flow = FlowField.from(tps: tps, width: roiW, height: roiH)
 
         try warp.apply(
             source: source,
@@ -122,7 +140,7 @@ public final class FramePipeline {
         let w = CVPixelBufferGetWidth(pb)
         let h = CVPixelBufferGetHeight(pb)
         let attrs: [String: Any] = [
-            kCVPixelBufferIOSurfacePropertiesKey as String: [:] as [String: Any],
+            kCVPixelBufferIOSurfacePropertiesKey as String: [:] as [String: Any]
         ]
         var out: CVPixelBuffer?
         CVPixelBufferCreate(kCFAllocatorDefault, w, h, kCVPixelFormatType_32BGRA, attrs as CFDictionary, &out)

@@ -20,9 +20,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var appProfileObserver: AppProfileObserver!
     private var overrides = AppProfileOverrides()
 
-    // Preview state shown in the popover
-    private var previewBefore: NSImage?
-    private var previewAfter: NSImage?
+    // Observable preview state — SwiftUI views re-render on every update.
+    private let previewState = PreviewState()
 
     // Calibration wizard (P3c.8)
     private var calibrationCapture: CalibrationCapture?
@@ -100,14 +99,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popoverController.contentSize = NSSize(width: PopoverStyle.popoverWidth, height: 250)
         let root = PopoverView(
             store: controlStore,
-            beforeImage: Binding(
-                get: { [weak self] in self?.previewBefore },
-                set: { [weak self] in self?.previewBefore = $0 }
-            ),
-            afterImage: Binding(
-                get: { [weak self] in self?.previewAfter },
-                set: { [weak self] in self?.previewAfter = $0 }
-            ),
+            previewState: previewState,
             onOpenWindow: { [weak self] in
                 self?.showMainWindow()
             }
@@ -149,8 +141,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     horizontalAimDeg: hAim,
                     sensitivity: sens
                 )
-                self.previewBefore = before
-                self.previewAfter = after
+                self.previewState.update(before: before, after: after)
             }
         }
         // Gate start on camera authorization. If .notDetermined, trigger the
@@ -248,14 +239,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 store: controlStore,
                 calibrationStore: calibrationStore,
                 overrides: overridesBinding,
-                beforeImage: Binding(
-                    get: { [weak self] in self?.previewBefore },
-                    set: { [weak self] in self?.previewBefore = $0 }
-                ),
-                afterImage: Binding(
-                    get: { [weak self] in self?.previewAfter },
-                    set: { [weak self] in self?.previewAfter = $0 }
-                ),
+                previewState: previewState,
                 onLaunchCalibration: { [weak self] in self?.launchCalibration() },
                 onRunAutoDetect: { [weak self] in self?.runAutoDetect() }
             )
@@ -381,11 +365,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func requestExtensionInstall() {
-        let delegate = SystemExtensionDelegate(onResult: { [weak self] activated in
-            Task { @MainActor in
-                self?.onboardingCoord?.extensionActivated = activated
+        onboardingCoord?.extInstallState = .submitted
+
+        let delegate = SystemExtensionDelegate(
+            onNeedsApproval: { [weak self] in
+                Task { @MainActor in
+                    self?.onboardingCoord?.extInstallState = .waitingForUserApproval
+                }
+            },
+            onResult: { [weak self] activated, message in
+                Task { @MainActor in
+                    guard let self else { return }
+                    if activated {
+                        self.onboardingCoord?.extInstallState = .activated
+                        self.onboardingCoord?.extensionActivated = true
+                    } else {
+                        self.onboardingCoord?.extInstallState = .failed(
+                            message ?? "Install failed. See Console.app for details."
+                        )
+                    }
+                }
             }
-        })
+        )
         systemExtensionDelegate = delegate
 
         let req = OSSystemExtensionRequest.activationRequest(
@@ -440,11 +441,16 @@ extension AppDelegate: NSWindowDelegate {
 }
 
 /// Bridge for `OSSystemExtensionRequest` callbacks during onboarding.
-/// Not main-actor isolated; hops back to the main actor inside `onResult`.
+/// Not main-actor isolated; hops back to the main actor inside callbacks.
 final class SystemExtensionDelegate: NSObject, OSSystemExtensionRequestDelegate, @unchecked Sendable {
-    private let onResult: @Sendable (Bool) -> Void
+    private let onNeedsApproval: @Sendable () -> Void
+    private let onResult: @Sendable (Bool, String?) -> Void
 
-    init(onResult: @escaping @Sendable (Bool) -> Void) {
+    init(
+        onNeedsApproval: @escaping @Sendable () -> Void,
+        onResult: @escaping @Sendable (Bool, String?) -> Void
+    ) {
+        self.onNeedsApproval = onNeedsApproval
         self.onResult = onResult
     }
 
@@ -453,11 +459,11 @@ final class SystemExtensionDelegate: NSObject, OSSystemExtensionRequestDelegate,
         actionForReplacingExtension existing: OSSystemExtensionProperties,
         withExtension ext: OSSystemExtensionProperties
     ) -> OSSystemExtensionRequest.ReplacementAction {
-        return .replace
+        .replace
     }
 
     func requestNeedsUserApproval(_ request: OSSystemExtensionRequest) {
-        // User needs to approve in System Settings. Not yet activated.
+        onNeedsApproval()
     }
 
     func request(
@@ -466,16 +472,20 @@ final class SystemExtensionDelegate: NSObject, OSSystemExtensionRequestDelegate,
     ) {
         switch result {
         case .completed:
-            onResult(true)
+            onResult(true, nil)
         case .willCompleteAfterReboot:
-            // Treat as activated for UX purposes (the reboot dialog drives the rest).
-            onResult(true)
+            onResult(true, "Installed — reboot required to finish.")
         @unknown default:
-            onResult(false)
+            onResult(false, "Unknown install result.")
         }
     }
 
     func request(_ request: OSSystemExtensionRequest, didFailWithError error: Error) {
-        onResult(false)
+        let ns = error as NSError
+        // Most common error: code 4 = "unsigned extension, developer mode required"
+        let hint = ns.code == 4
+            ? " — unsigned build; run: sudo systemextensionsctl developer on"
+            : ""
+        onResult(false, "\(ns.localizedDescription)\(hint)")
     }
 }

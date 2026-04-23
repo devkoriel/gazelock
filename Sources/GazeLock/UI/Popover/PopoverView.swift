@@ -3,28 +3,25 @@ import SwiftUI
 
 public struct PopoverView: View {
     @Bindable var store: ControlStateStore
-    @Binding var beforeImage: NSImage?
-    @Binding var afterImage: NSImage?
+    @Bindable var previewState: PreviewState
     var onOpenWindow: () -> Void
 
     @State private var showingSetupSheet = false
 
     public init(
         store: ControlStateStore,
-        beforeImage: Binding<NSImage?>,
-        afterImage: Binding<NSImage?>,
+        previewState: PreviewState,
         onOpenWindow: @escaping () -> Void
     ) {
         self.store = store
-        self._beforeImage = beforeImage
-        self._afterImage = afterImage
+        self.previewState = previewState
         self.onOpenWindow = onOpenWindow
     }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: PopoverStyle.spacing) {
             header
-            LivePreview(beforeImage: $beforeImage, afterImage: $afterImage)
+            LivePreview(beforeImage: $previewState.before, afterImage: $previewState.after)
             toggleRow
             intensityRow
             setupRow
