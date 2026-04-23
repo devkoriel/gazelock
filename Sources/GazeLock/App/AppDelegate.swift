@@ -127,20 +127,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                    let landmarks = try? detector.detect(in: pb, timestamp: ts) {
                     capture.feed(headPose: landmarks.headPoseRadians)
                 }
-                let intensity = self.controlStore.state.intensity
-                let vAim = self.controlStore.state.verticalAimDeg
-                let hAim = self.controlStore.state.horizontalAimDeg
-                let sens = self.controlStore.state.sensitivity
-                // Run pipeline work without blocking the main actor.
-                let after: NSImage? = await Self.processOffMain(
-                    pipeline: pipelineRef,
-                    pixelBuffer: pb,
-                    timestamp: ts,
-                    intensity: intensity,
-                    verticalAimDeg: vAim,
-                    horizontalAimDeg: hAim,
-                    sensitivity: sens
-                )
+                // Respect the correction toggle — if OFF, AFTER just mirrors
+                // BEFORE (passthrough). Matches the extension-side gate.
+                let after: NSImage?
+                if self.controlStore.state.isEnabled {
+                    let intensity = self.controlStore.state.intensity
+                    let vAim = self.controlStore.state.verticalAimDeg
+                    let hAim = self.controlStore.state.horizontalAimDeg
+                    let sens = self.controlStore.state.sensitivity
+                    after = await Self.processOffMain(
+                        pipeline: pipelineRef,
+                        pixelBuffer: pb,
+                        timestamp: ts,
+                        intensity: intensity,
+                        verticalAimDeg: vAim,
+                        horizontalAimDeg: hAim,
+                        sensitivity: sens
+                    )
+                } else {
+                    after = before
+                }
                 self.previewState.update(before: before, after: after)
             }
         }
