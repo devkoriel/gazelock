@@ -60,9 +60,10 @@ __pycache__/
 docs/superpowers/
 
 # ML weights: debug/smoke artefacts are ephemeral — not committed.
-# Release .mlpackage goes to Git LFS in Phase 4.
+# Release weights/refiner.mlpackage + bundled Resources/Models are shipped via Git LFS.
 weights/debug/
-weights/*.mlpackage
+weights/sanity/
+weights/v1/
 
 # CC0 asset binaries — fetched locally by fetch_assets.py, not committed
 ML/gazelock_ml/synthesis/blender/assets/eyes/*.glb

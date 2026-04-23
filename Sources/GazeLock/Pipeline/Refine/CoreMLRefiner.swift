@@ -13,8 +13,10 @@ public final class CoreMLRefiner {
     }
 
     /// Canonical path in the app bundle (relative to Resources dir).
+    /// Xcode auto-compiles shipped .mlpackage files to .mlmodelc at build time,
+    /// so the RUNTIME extension we search for is .mlmodelc.
     public static let bundledModelResource = "refiner"
-    public static let bundledModelExtension = "mlpackage"
+    public static let bundledModelExtension = "mlmodelc"
 
     private let model: MLModel
 
