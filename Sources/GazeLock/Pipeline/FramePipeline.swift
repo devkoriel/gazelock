@@ -102,31 +102,35 @@ public final class FramePipeline {
         let roiX = max(0, min(imgW - roiW, Int(eye.pupilCenter.x) - roiW / 2))
         let roiY = max(0, min(imgH - roiH, Int(eye.pupilCenter.y) - roiH / 2))
 
-        // Build TPS in ROI-LOCAL coordinates (0..roiW-1, 0..roiH-1) because
-        // FlowField samples at those same local coords. Feeding full-image
-        // coords to the fit would make every flow vector point far out of
-        // bounds, which Metal reads back as white — the "white box" bug.
-        let localPupil = Vec2(
-            eye.pupilCenter.x - Double(roiX),
-            eye.pupilCenter.y - Double(roiY)
-        )
-        let localTarget = Vec2(
-            effectiveTarget.x - Double(roiX),
-            effectiveTarget.y - Double(roiY)
-        )
-
+        // TPS control points + queries MUST be in full-image coordinates
+        // because IrisWarp.metal samples by dividing `srcPx / texSize` where
+        // texSize is the full input texture's width × height. If TPS runs in
+        // ROI-local coords the flow values collapse to the top-left 96×72 px
+        // of the source texture — showing as tiny white boxes over the
+        // irises.
         let source4 = [
-            Vec2(0, 0),
-            Vec2(Double(roiW - 1), 0),
-            Vec2(0, Double(roiH - 1)),
-            Vec2(Double(roiW - 1), Double(roiH - 1)),
-            localPupil,
+            Vec2(Double(roiX), Double(roiY)),
+            Vec2(Double(roiX + roiW - 1), Double(roiY)),
+            Vec2(Double(roiX), Double(roiY + roiH - 1)),
+            Vec2(Double(roiX + roiW - 1), Double(roiY + roiH - 1)),
+            eye.pupilCenter,
         ]
         var target5 = source4
-        target5[4] = localTarget
+        target5[4] = effectiveTarget
 
         let tps = ThinPlateSpline.fit(source: target5, target: source4)  // inverse mapping for sampling
-        let flow = FlowField.from(tps: tps, width: roiW, height: roiH)
+
+        // Evaluate the TPS at each output pixel INSIDE the ROI, using full-image
+        // query coordinates. Result = full-image source pixel to sample from.
+        var queries: [Vec2] = []
+        queries.reserveCapacity(roiW * roiH)
+        for y in 0..<roiH {
+            for x in 0..<roiW {
+                queries.append(Vec2(Double(roiX + x), Double(roiY + y)))
+            }
+        }
+        let evaluated = tps.evaluate(at: queries)
+        let flow = FlowField(width: roiW, height: roiH, data: evaluated)
 
         try warp.apply(
             source: source,
